@@ -3,7 +3,9 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -12,6 +14,7 @@ import { PetGender } from '../../../common/enums/pet-gender.enum';
 import { PetSpecies } from '../../../common/enums/pet-species.enum';
 import { PetStatus } from '../../../common/enums/pet-status.enum';
 import { UserEntity } from '../../users/entities/user.entity';
+import { PetPhotoEntity } from './pet-photo.entity';
 
 /**
  * Entity профілю тварини.
@@ -31,7 +34,14 @@ export class PetEntity {
   @ManyToOne(() => UserEntity, {
     onDelete: 'CASCADE',
   })
+  @JoinColumn({ name: 'owner_id' })
   owner: UserEntity;
+
+  /**
+   * Фото тварини.
+   */
+  @OneToMany(() => PetPhotoEntity, (photo) => photo.pet)
+  photos: PetPhotoEntity[];
 
   /**
    * Кличка тварини.

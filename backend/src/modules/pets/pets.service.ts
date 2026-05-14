@@ -5,14 +5,18 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import type { Express } from 'express';
 import { Repository } from 'typeorm';
 
 import { PetStatus } from '../../common/enums/pet-status.enum';
 import { RoleCode } from '../../common/enums/role-code.enum';
+import { FilesService } from '../files/files.service';
 import { RolesService } from '../roles/roles.service';
 import { CreatePetDto } from './dto/create-pet.dto';
+import { PetPhotoResponseDto } from './dto/pet-photo-response.dto';
 import { PetResponseDto } from './dto/pet-response.dto';
 import { UpdatePetDto } from './dto/update-pet.dto';
+import { PetPhotoEntity } from './entities/pet-photo.entity';
 import { PetEntity } from './entities/pet.entity';
 
 /**
@@ -21,11 +25,17 @@ import { PetEntity } from './entities/pet.entity';
  */
 @Injectable()
 export class PetsService {
+  private readonly maxPetPhotos = 5;
+
   constructor(
     @InjectRepository(PetEntity)
     private readonly petsRepository: Repository<PetEntity>,
 
+    @InjectRepository(PetPhotoEntity)
+    private readonly petPhotosRepository: Repository<PetPhotoEntity>,
+
     private readonly rolesService: RolesService,
+    private readonly filesService: FilesService,
   ) {}
 
   /**
@@ -53,7 +63,6 @@ export class PetsService {
 
     /**
      * Після створення першої тварини користувач отримує роль pet_owner.
-     * Якщо роль уже є, RolesService не створить дубль.
      */
     await this.rolesService.assignRoleToUser(ownerId, RoleCode.PET_OWNER);
 
@@ -65,8 +74,11 @@ export class PetsService {
    */
   async getMyPets(ownerId: string): Promise<PetResponseDto[]> {
     const pets = await this.petsRepository.find({
-      where: {
-        ownerId,
+      where: { ownerId },
+      relations: {
+        photos: {
+          file: true,
+        },
       },
       order: {
         createdAt: 'DESC',
@@ -80,8 +92,11 @@ export class PetsService {
    * Повертає тварину за id.
    * Для MVP детальний профіль бачить тільки власник.
    */
-  async getPetById(petId: string, currentUserId: string): Promise<PetResponseDto> {
-    const pet = await this.findPetOrFail(petId);
+  async getPetById(
+    petId: string,
+    currentUserId: string,
+  ): Promise<PetResponseDto> {
+    const pet = await this.findPetWithPhotosOrFail(petId);
 
     this.ensureOwner(pet, currentUserId);
 
@@ -143,13 +158,13 @@ export class PetsService {
     }
 
     const savedPet = await this.petsRepository.save(pet);
+    const petWithPhotos = await this.findPetWithPhotosOrFail(savedPet.id);
 
-    return this.toResponseDto(savedPet);
+    return this.toResponseDto(petWithPhotos);
   }
 
   /**
    * Архівує профіль тварини.
-   * Фізично запис не видаляємо, щоб не ламати майбутню історію SOS/QR.
    */
   async archivePet(
     petId: string,
@@ -163,6 +178,124 @@ export class PetsService {
 
     await this.petsRepository.save(pet);
     await this.petsRepository.softDelete(pet.id);
+
+    return { success: true };
+  }
+
+  /**
+   * Додає фото до профілю тварини.
+   */
+  async addPhoto(
+    petId: string,
+    currentUserId: string,
+    file: Express.Multer.File | undefined,
+  ): Promise<PetPhotoResponseDto> {
+    const pet = await this.findPetOrFail(petId);
+
+    this.ensureOwner(pet, currentUserId);
+    this.ensurePetIsEditable(pet);
+
+    const existingPhotosCount = await this.petPhotosRepository.count({
+      where: { petId },
+    });
+
+    if (existingPhotosCount >= this.maxPetPhotos) {
+      throw new UnprocessableEntityException({
+        errorCode: 'MAX_FILES_LIMIT_REACHED',
+        message: 'До однієї тварини можна додати максимум 5 фото',
+      });
+    }
+
+    const uploadedFile = await this.filesService.uploadPetPhoto(
+      file,
+      currentUserId,
+      pet.id,
+    );
+
+    /**
+     * Якщо це перше фото тварини, воно автоматично стає головним.
+     */
+    const isMain = existingPhotosCount === 0;
+
+    const petPhoto = this.petPhotosRepository.create({
+      petId: pet.id,
+      fileId: uploadedFile.id,
+      isMain,
+      displayOrder: existingPhotosCount,
+    });
+
+    const savedPhoto = await this.petPhotosRepository.save(petPhoto);
+
+    const photoWithFile = await this.findPhotoOrFail(pet.id, savedPhoto.id);
+
+    return this.toPhotoResponseDto(photoWithFile);
+  }
+
+  /**
+   * Робить фото головним.
+   */
+  async setMainPhoto(
+    petId: string,
+    photoId: string,
+    currentUserId: string,
+  ): Promise<PetPhotoResponseDto> {
+    const pet = await this.findPetOrFail(petId);
+
+    this.ensureOwner(pet, currentUserId);
+    this.ensurePetIsEditable(pet);
+
+    const photo = await this.findPhotoOrFail(pet.id, photoId);
+
+    /**
+     * Спочатку прибираємо isMain з усіх фото тварини.
+     */
+    await this.petPhotosRepository.update(
+      { petId: pet.id },
+      { isMain: false },
+    );
+
+    photo.isMain = true;
+
+    const savedPhoto = await this.petPhotosRepository.save(photo);
+    const photoWithFile = await this.findPhotoOrFail(pet.id, savedPhoto.id);
+
+    return this.toPhotoResponseDto(photoWithFile);
+  }
+
+  /**
+   * Видаляє фото тварини.
+   */
+  async deletePhoto(
+    petId: string,
+    photoId: string,
+    currentUserId: string,
+  ): Promise<{ success: boolean }> {
+    const pet = await this.findPetOrFail(petId);
+
+    this.ensureOwner(pet, currentUserId);
+    this.ensurePetIsEditable(pet);
+
+    const photo = await this.findPhotoOrFail(pet.id, photoId);
+    const wasMain = photo.isMain;
+
+    await this.petPhotosRepository.softDelete(photo.id);
+    await this.filesService.deleteFile(photo.fileId);
+
+    /**
+     * Якщо видалили головне фото, призначаємо головним наступне доступне.
+     */
+    if (wasMain) {
+      const nextPhoto = await this.petPhotosRepository.findOne({
+        where: { petId: pet.id },
+        relations: { file: true },
+        order: { createdAt: 'ASC' },
+      });
+
+      if (nextPhoto) {
+        nextPhoto.isMain = true;
+        await this.petPhotosRepository.save(nextPhoto);
+      }
+    }
 
     return { success: true };
   }
@@ -184,8 +317,29 @@ export class PetsService {
    */
   private async findPetOrFail(petId: string): Promise<PetEntity> {
     const pet = await this.petsRepository.findOne({
-      where: {
-        id: petId,
+      where: { id: petId },
+    });
+
+    if (!pet) {
+      throw new NotFoundException({
+        errorCode: 'PET_NOT_FOUND',
+        message: 'Тварину не знайдено',
+      });
+    }
+
+    return pet;
+  }
+
+  /**
+   * Знаходить тварину разом із фото.
+   */
+  private async findPetWithPhotosOrFail(petId: string): Promise<PetEntity> {
+    const pet = await this.petsRepository.findOne({
+      where: { id: petId },
+      relations: {
+        photos: {
+          file: true,
+        },
       },
     });
 
@@ -197,6 +351,33 @@ export class PetsService {
     }
 
     return pet;
+  }
+
+  /**
+   * Знаходить фото тварини або повертає 404.
+   */
+  private async findPhotoOrFail(
+    petId: string,
+    photoId: string,
+  ): Promise<PetPhotoEntity> {
+    const photo = await this.petPhotosRepository.findOne({
+      where: {
+        id: photoId,
+        petId,
+      },
+      relations: {
+        file: true,
+      },
+    });
+
+    if (!photo) {
+      throw new NotFoundException({
+        errorCode: 'PET_PHOTO_NOT_FOUND',
+        message: 'Фото тварини не знайдено',
+      });
+    }
+
+    return photo;
   }
 
   /**
@@ -243,9 +424,12 @@ export class PetsService {
   }
 
   /**
-   * Перетворює Entity у DTO.
+   * Перетворює Entity тварини у DTO.
    */
   private toResponseDto(pet: PetEntity): PetResponseDto {
+    const photos = pet.photos?.map((photo) => this.toPhotoResponseDto(photo)) ?? [];
+    const mainPhoto = photos.find((photo) => photo.isMain);
+
     return {
       id: pet.id,
       ownerId: pet.ownerId,
@@ -260,8 +444,25 @@ export class PetsService {
       chipNumber: pet.chipNumber,
       isPublic: pet.isPublic,
       status: pet.status,
+      mainPhotoUrl: mainPhoto?.file.url ?? null,
+      photos,
       createdAt: pet.createdAt.toISOString(),
       updatedAt: pet.updatedAt.toISOString(),
+    };
+  }
+
+  /**
+   * Перетворює Entity фото тварини у DTO.
+   */
+  private toPhotoResponseDto(photo: PetPhotoEntity): PetPhotoResponseDto {
+    return {
+      id: photo.id,
+      petId: photo.petId,
+      fileId: photo.fileId,
+      isMain: photo.isMain,
+      displayOrder: photo.displayOrder,
+      file: this.filesService.toResponseDto(photo.file),
+      createdAt: photo.createdAt.toISOString(),
     };
   }
 }

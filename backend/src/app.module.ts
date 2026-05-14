@@ -5,6 +5,7 @@ import { UsersModule } from './modules/users/users.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PetsModule } from './modules/pets/pets.module';
+import { FilesModule } from './modules/files/files.module';
 
 import databaseConfig from './config/database.config';
 
@@ -59,6 +60,8 @@ import databaseConfig from './config/database.config';
     AuthModule,
 
     PetsModule,
+
+    FilesModule,
   ],
 })
 export class AppModule {}
