@@ -7,6 +7,8 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import type { JwtUserPayload } from './interfaces/jwt-user-payload.interface';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+
 
 /**
  * Controller авторизації.
@@ -17,6 +19,7 @@ import type { JwtUserPayload } from './interfaces/jwt-user-payload.interface';
  * POST /auth/logout
  * GET  /auth/me
  */
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -49,6 +52,7 @@ export class AuthController {
    * Logout.
    * Для MVP відкликаємо всі активні сесії користувача.
    */
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   logout(@CurrentUser() user: JwtUserPayload) {
@@ -58,6 +62,7 @@ export class AuthController {
   /**
    * Поточний користувач.
    */
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('me')
   getMe(@CurrentUser() user: JwtUserPayload) {
