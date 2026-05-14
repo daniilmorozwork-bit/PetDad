@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { UsersModule } from './modules/users/users.module';
+import { RolesModule } from './modules/roles/roles.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 import databaseConfig from './config/database.config';
 
@@ -47,6 +50,12 @@ import databaseConfig from './config/database.config';
         synchronize: true,
       }),
     }),
+
+    UsersModule,
+
+    RolesModule,
+
+    AuthModule,
   ],
 })
 export class AppModule {}
