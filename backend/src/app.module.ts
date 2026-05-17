@@ -10,6 +10,7 @@ import { QrModule } from './modules/qr/qr.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { MapEventsModule } from './modules/map-events/map-events.module';
 import { LostReportsModule } from './modules/lost-reports/lost-reports.module';
+import { SightingsModule } from './modules/sightings/sightings.module';
 
 import databaseConfig from './config/database.config';
 
@@ -74,6 +75,8 @@ import databaseConfig from './config/database.config';
     MapEventsModule,
 
     LostReportsModule,
+
+    SightingsModule,
   ],
 })
 export class AppModule {}
