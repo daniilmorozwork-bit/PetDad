@@ -312,6 +312,21 @@ export class PetsService {
     return pet;
   }
 
+    /**
+   * Змінює статус тварини.
+   * Використовується іншими модулями, наприклад LostReportsModule.
+   */
+  async changePetStatus(
+    petId: string,
+    status: PetStatus,
+  ): Promise<PetEntity> {
+    const pet = await this.findPetOrFail(petId);
+
+    pet.status = status;
+
+    return this.petsRepository.save(pet);
+  }
+
   /**
    * Знаходить тварину або повертає 404.
    */
