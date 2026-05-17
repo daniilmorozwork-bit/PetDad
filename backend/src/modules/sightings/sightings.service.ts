@@ -18,6 +18,8 @@ import { CreateSightingDto } from './dto/create-sighting.dto';
 import { SightingResponseDto } from './dto/sighting-response.dto';
 import { SightingReportEntity } from './entities/sighting-report.entity';
 
+import { NotificationType } from '../../common/enums/notification-type.enum';
+import { NotificationsService } from '../notifications/notifications.service';
 /**
  * Сервіс свідчень.
  * Відповідає за створення свідчень до активного SOS і створення подій карти.
@@ -35,6 +37,7 @@ export class SightingsService {
 
     private readonly locationsService: LocationsService,
     private readonly mapEventsService: MapEventsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -94,6 +97,26 @@ export class SightingsService {
 
     savedSighting.mapEventId = mapEvent.id;
     await this.sightingsRepository.save(savedSighting);
+
+        /**
+     * Повідомляємо власника тварини про нове свідчення.
+     */
+    await this.notificationsService.createNotification({
+      recipientId: lostReport.ownerId,
+      type: NotificationType.NEW_SIGHTING,
+      title: 'Нове свідчення щодо тварини',
+      body: `Користувач додав свідчення щодо тварини ${lostReport.pet.name}.`,
+      entityType: this.sourceEntityType,
+      entityId: savedSighting.id,
+      data: {
+        lostReportId: lostReport.id,
+        petId: lostReport.petId,
+        mapEventId: mapEvent.id,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+        confidenceLevel: dto.confidenceLevel,
+      },
+    });
 
     return this.getSightingById(savedSighting.id);
   }

@@ -8,6 +8,7 @@ import { LostPetReportEntity } from './entities/lost-pet-report.entity';
 import { LostReportsController } from './lost-reports.controller';
 import { LostReportsService } from './lost-reports.service';
 
+import { NotificationsModule } from '../notifications/notifications.module';
 /**
  * Модуль SOS-оголошень про зникнення тварин.
  */
@@ -17,7 +18,9 @@ import { LostReportsService } from './lost-reports.service';
     PetsModule,
     LocationsModule,
     MapEventsModule,
+    NotificationsModule,
   ],
+  
   controllers: [LostReportsController],
   providers: [LostReportsService],
   exports: [LostReportsService],

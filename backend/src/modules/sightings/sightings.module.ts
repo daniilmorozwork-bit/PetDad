@@ -9,6 +9,8 @@ import { SightingReportEntity } from './entities/sighting-report.entity';
 import { SightingsController } from './sightings.controller';
 import { SightingsService } from './sightings.service';
 
+import { NotificationsModule } from '../notifications/notifications.module';
+
 /**
  * Модуль свідчень.
  */
@@ -21,6 +23,7 @@ import { SightingsService } from './sightings.service';
     ]),
     LocationsModule,
     MapEventsModule,
+    NotificationsModule,
   ],
   controllers: [SightingsController],
   providers: [SightingsService],

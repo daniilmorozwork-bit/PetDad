@@ -7,6 +7,7 @@ import { QrController } from './qr.controller';
 import { QrCodeEntity } from './entities/qr-code.entity';
 import { QrScanEventEntity } from './entities/qr-scan-event.entity';
 import { QrService } from './qr.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 /**
  * Модуль QR-кодів.
@@ -19,6 +20,7 @@ import { QrService } from './qr.service';
       PetEntity,
     ]),
     PetsModule,
+    NotificationsModule,
   ],
   controllers: [QrController],
   providers: [QrService],

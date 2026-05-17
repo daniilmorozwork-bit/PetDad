@@ -20,6 +20,9 @@ import { RegisterQrScanDto } from './dto/register-qr-scan.dto';
 import { QrCodeEntity } from './entities/qr-code.entity';
 import { QrScanEventEntity } from './entities/qr-scan-event.entity';
 
+import { NotificationType } from '../../common/enums/notification-type.enum';
+import { NotificationsService } from '../notifications/notifications.service';
+
 /**
  * Сервіс QR-кодів.
  * Відповідає за створення QR, перевипуск, публічний профіль і сканування.
@@ -37,6 +40,8 @@ export class QrService {
     private readonly petsRepository: Repository<PetEntity>,
 
     private readonly petsService: PetsService,
+
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -157,6 +162,24 @@ export class QrService {
     });
 
     const savedScanEvent = await this.qrScanEventsRepository.save(scanEvent);
+
+        /**
+     * Повідомляємо власника тварини про сканування QR.
+     */
+    await this.notificationsService.createNotification({
+      recipientId: qrCode.pet.ownerId,
+      type: NotificationType.QR_SCANNED,
+      title: 'QR-код тварини проскановано',
+      body: `QR-код тварини ${qrCode.pet.name} було відкрито.`,
+      entityType: 'qr_scan_event',
+      entityId: savedScanEvent.id,
+      data: {
+        petId: qrCode.petId,
+        qrCodeId: qrCode.id,
+        latitude: dto.latitude ?? null,
+        longitude: dto.longitude ?? null,
+      },
+    });
 
     return {
       success: true,

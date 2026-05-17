@@ -22,6 +22,9 @@ import { LostReportResponseDto } from './dto/lost-report-response.dto';
 import { LostReportsQueryDto } from './dto/lost-reports-query.dto';
 import { LostPetReportEntity } from './entities/lost-pet-report.entity';
 
+import { NotificationType } from '../../common/enums/notification-type.enum';
+import { NotificationsService } from '../notifications/notifications.service';
+
 /**
  * Сервіс SOS-оголошень про зникнення тварин.
  */
@@ -36,6 +39,7 @@ export class LostReportsService {
     private readonly petsService: PetsService,
     private readonly locationsService: LocationsService,
     private readonly mapEventsService: MapEventsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -87,7 +91,7 @@ export class LostReportsService {
      * Створюємо подію карти.
      * Саме її буде читати MapScreen у Flutter.
      */
-    await this.mapEventsService.createMapEvent({
+    const mapEvent = await this.mapEventsService.createMapEvent({
       type: MapEventType.LOST_PET,
       title: `Зникла тварина: ${pet.name}`,
       description: dto.description.trim(),
@@ -97,6 +101,24 @@ export class LostReportsService {
       petId: pet.id,
       createdById: currentUserId,
     });
+
+    /**
+     * Створюємо внутрішнє повідомлення власнику.
+     * На цьому етапі це підтвердження створення SOS.
+     */
+    await this.notificationsService.createNotification({
+      recipientId: currentUserId,
+      type: NotificationType.LOST_PET_CREATED,
+      title: 'SOS-оголошення створено',
+      body: `SOS-пошук для тварини ${pet.name} опубліковано.`,
+      entityType: this.sourceEntityType,
+      entityId: savedReport.id,
+      data: {
+        petId: pet.id,
+        mapEventId: mapEvent.id,
+        searchRadiusMeters: savedReport.searchRadiusMeters,
+      },
+      });
 
     return this.getLostReportById(savedReport.id);
   }
