@@ -7,6 +7,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { PetsModule } from './modules/pets/pets.module';
 import { FilesModule } from './modules/files/files.module';
 import { QrModule } from './modules/qr/qr.module';
+import { LocationsModule } from './modules/locations/locations.module';
+import { MapEventsModule } from './modules/map-events/map-events.module';
 
 import databaseConfig from './config/database.config';
 
@@ -65,6 +67,10 @@ import databaseConfig from './config/database.config';
     FilesModule,
 
     QrModule,
+
+    LocationsModule,
+
+    MapEventsModule,
   ],
 })
 export class AppModule {}
