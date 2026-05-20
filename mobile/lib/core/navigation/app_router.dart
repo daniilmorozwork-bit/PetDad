@@ -10,6 +10,11 @@ import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
+
+import '../../features/pets/presentation/screens/create_pet_screen.dart';
+import '../../features/pets/presentation/screens/my_pets_screen.dart';
+import '../../features/pets/presentation/screens/pet_details_screen.dart';
+
 /// Створення маршрутизатора застосунку.
 GoRouter createAppRouter(AuthCubit authCubit) {
   return GoRouter(
@@ -59,6 +64,22 @@ GoRouter createAppRouter(AuthCubit authCubit) {
       GoRoute(
         path: '/home',
         builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: '/pets',
+        builder: (context, state) => const MyPetsScreen(),
+      ),
+      GoRoute(
+        path: '/pets/create',
+        builder: (context, state) => const CreatePetScreen(),
+      ),
+      GoRoute(
+        path: '/pets/:id',
+        builder: (context, state) {
+          final petId = state.pathParameters['id']!;
+
+          return PetDetailsScreen(petId: petId);
+        },
       ),
     ],
   );

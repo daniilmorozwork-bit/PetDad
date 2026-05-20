@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
 
+import 'package:go_router/go_router.dart';
+
 /// Тимчасовий головний екран.
 /// Пізніше тут будуть швидкі дії: SOS, мої тварини, карта, QR.
 class HomeScreen extends StatelessWidget {
@@ -65,6 +67,14 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  context.push('/pets');
+                },
+                icon: const Icon(Icons.pets),
+                label: const Text('Мої тварини'),
+              ),
           ],
         ),
       ),

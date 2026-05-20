@@ -13,13 +13,16 @@ import { join } from 'path';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-    /**
-   * Віддаємо локально завантажені файли через /uploads.
-   * Наприклад: http://localhost:3000/uploads/pets/photo.jpg
-   */
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    prefix: '/uploads/',
-  });
+   /**
+ * Дозволяємо frontend отримувати файли з backend.
+ */
+app.useStaticAssets(join(process.cwd(), 'uploads'), {
+  prefix: '/uploads/',
+  setHeaders: (res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  },
+});
 
   /**
    * Усі endpoints будуть починатися з /api/v1.
@@ -46,7 +49,8 @@ async function bootstrap() {
    * Для локальної розробки дозволяємо всі origin.
    */
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: '*',
+    credentials: false,
   });
 
   /**
