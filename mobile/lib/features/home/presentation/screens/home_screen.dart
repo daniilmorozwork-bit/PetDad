@@ -75,6 +75,14 @@ class HomeScreen extends StatelessWidget {
                 icon: const Icon(Icons.pets),
                 label: const Text('Мої тварини'),
               ),
+              const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    context.push('/lost-reports');
+                  },
+                  icon: const Icon(Icons.campaign_outlined),
+                  label: const Text('SOS-пошук'),
+            ),
           ],
         ),
       ),

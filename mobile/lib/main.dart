@@ -11,7 +11,8 @@ import 'features/pets/data/repositories/pets_repository.dart';
 import 'features/pets/presentation/cubit/pets_cubit.dart';
 import 'features/qr/data/repositories/qr_repository.dart';
 import 'features/qr/presentation/cubit/qr_cubit.dart';
-
+import 'features/lost_reports/data/repositories/lost_reports_repository.dart';
+import 'features/lost_reports/presentation/cubit/lost_reports_cubit.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,10 +27,13 @@ void main() {
 
   final petsRepository = PetsRepository(apiClient: apiClient);
   final qrRepository = QrRepository(apiClient: apiClient);
+  final lostReportsRepository = LostReportsRepository(apiClient: apiClient);
 
   final authCubit = AuthCubit(authRepository);
   final petsCubit = PetsCubit(petsRepository);
   final qrCubit = QrCubit(qrRepository);
+  final lostReportsCubit = LostReportsCubit(lostReportsRepository);
+  
 
  
   final appRouter = createAppRouter(authCubit);
@@ -39,6 +43,7 @@ void main() {
       authCubit: authCubit,
       petsCubit: petsCubit,
       qrCubit: qrCubit,
+      lostReportsCubit: lostReportsCubit,
       appRouter: appRouter,
     ),
   );
@@ -49,6 +54,7 @@ class PetDadApp extends StatelessWidget {
   final AuthCubit authCubit;
   final PetsCubit petsCubit;
   final QrCubit qrCubit;
+  final LostReportsCubit lostReportsCubit;
   final RouterConfig<Object> appRouter;
 
   const PetDadApp({
@@ -56,6 +62,7 @@ class PetDadApp extends StatelessWidget {
     required this.authCubit,
     required this.petsCubit,
     required this.qrCubit,
+    required this.lostReportsCubit,
     required this.appRouter,
   });
 
@@ -66,6 +73,7 @@ class PetDadApp extends StatelessWidget {
         BlocProvider<AuthCubit>.value(value: authCubit),
         BlocProvider<PetsCubit>.value(value: petsCubit),
         BlocProvider<QrCubit>.value(value: qrCubit),
+        BlocProvider<LostReportsCubit>.value(value: lostReportsCubit),
       ],
       child: MaterialApp.router(
         title: 'PetDad',

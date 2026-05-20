@@ -340,19 +340,46 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                       ),
                       const SizedBox(height: 8),
 
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'SOS-пошук додамо після екранів QR і карти',
-                              ),
-                            ),
+                     OutlinedButton.icon(
+                      onPressed: () {
+                        if (pet.status == 'lost') {
+                          showDialog<void>(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                title: const Text('SOS уже активне'),
+                                content: const Text(
+                                  'Для цієї тварини вже створено активне SOS-оголошення. Неможливо створити друге SOS для тварини зі статусом “зникла”.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    child: const Text('Зрозуміло'),
+                                  ),
+                                  FilledButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                      context.push('/lost-reports');
+                                    },
+                                    child: const Text('Перейти до SOS'),
+                                  ),
+                                ],
+                              );
+                            },
                           );
-                        },
-                        icon: const Icon(Icons.campaign_outlined),
-                        label: const Text('Створити SOS'),
+
+                          return;
+                        }
+
+                        context.push('/lost-reports/create/${widget.petId}');
+                      },
+                      icon: const Icon(Icons.campaign_outlined),
+                      label: Text(
+                        pet.status == 'lost' ? 'SOS уже активне' : 'Створити SOS',
                       ),
+                    ),
                     ],
                   ),
 
