@@ -6,6 +6,7 @@ import '../../../../core/config/app_config.dart';
 import '../../data/models/pet_model.dart';
 import '../cubit/pets_cubit.dart';
 import '../cubit/pets_state.dart';
+import 'package:go_router/go_router.dart';
 
 /// Екран деталей тварини.
 class PetDetailsScreen extends StatefulWidget {
@@ -332,13 +333,7 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
 
                       FilledButton.icon(
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'QR-код додамо на наступному етапі Flutter',
-                              ),
-                            ),
-                          );
+                          context.push('/pets/${widget.petId}/qr');
                         },
                         icon: const Icon(Icons.qr_code),
                         label: const Text('QR-код'),

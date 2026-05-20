@@ -9,6 +9,8 @@ import 'features/auth/data/repositories/auth_repository.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
 import 'features/pets/data/repositories/pets_repository.dart';
 import 'features/pets/presentation/cubit/pets_cubit.dart';
+import 'features/qr/data/repositories/qr_repository.dart';
+import 'features/qr/presentation/cubit/qr_cubit.dart';
 
 
 void main() {
@@ -23,9 +25,11 @@ void main() {
   );
 
   final petsRepository = PetsRepository(apiClient: apiClient);
+  final qrRepository = QrRepository(apiClient: apiClient);
 
   final authCubit = AuthCubit(authRepository);
   final petsCubit = PetsCubit(petsRepository);
+  final qrCubit = QrCubit(qrRepository);
 
  
   final appRouter = createAppRouter(authCubit);
@@ -34,6 +38,7 @@ void main() {
     PetDadApp(
       authCubit: authCubit,
       petsCubit: petsCubit,
+      qrCubit: qrCubit,
       appRouter: appRouter,
     ),
   );
@@ -43,12 +48,14 @@ void main() {
 class PetDadApp extends StatelessWidget {
   final AuthCubit authCubit;
   final PetsCubit petsCubit;
+  final QrCubit qrCubit;
   final RouterConfig<Object> appRouter;
 
   const PetDadApp({
     super.key,
     required this.authCubit,
     required this.petsCubit,
+    required this.qrCubit,
     required this.appRouter,
   });
 
@@ -58,6 +65,7 @@ class PetDadApp extends StatelessWidget {
       providers: [
         BlocProvider<AuthCubit>.value(value: authCubit),
         BlocProvider<PetsCubit>.value(value: petsCubit),
+        BlocProvider<QrCubit>.value(value: qrCubit),
       ],
       child: MaterialApp.router(
         title: 'PetDad',

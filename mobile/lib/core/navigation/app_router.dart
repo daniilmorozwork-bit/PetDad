@@ -14,6 +14,8 @@ import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/pets/presentation/screens/create_pet_screen.dart';
 import '../../features/pets/presentation/screens/my_pets_screen.dart';
 import '../../features/pets/presentation/screens/pet_details_screen.dart';
+import '../../features/qr/presentation/screens/pet_qr_screen.dart';
+import '../../features/qr/presentation/screens/public_qr_profile_screen.dart';
 
 /// Створення маршрутизатора застосунку.
 GoRouter createAppRouter(AuthCubit authCubit) {
@@ -79,6 +81,22 @@ GoRouter createAppRouter(AuthCubit authCubit) {
           final petId = state.pathParameters['id']!;
 
           return PetDetailsScreen(petId: petId);
+        },
+      ),
+      GoRoute(
+        path: '/pets/:id/qr',
+        builder: (context, state) {
+          final petId = state.pathParameters['id']!;
+
+          return PetQrScreen(petId: petId);
+        },
+      ),
+      GoRoute(
+        path: '/qr-public/:token',
+        builder: (context, state) {
+          final token = state.pathParameters['token']!;
+
+          return PublicQrProfileScreen(token: token);
         },
       ),
     ],

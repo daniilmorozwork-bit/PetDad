@@ -232,10 +232,11 @@ export class QrService {
    * Формує публічний URL для QR-коду.
    */
   private buildPublicUrl(token: string): string {
-    const baseUrl = process.env.APP_PUBLIC_URL || 'http://localhost:3000';
+  const frontendUrl =
+    process.env.APP_FRONTEND_URL || 'http://localhost:8080';
 
-    return `${baseUrl}/api/v1/qr/${token}`;
-  }
+  return `${frontendUrl}/#/qr-public/${token}`;
+}
 
   /**
    * Шукає QR за токеном разом із твариними фото.
