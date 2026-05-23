@@ -5,6 +5,7 @@ import '../cubit/sightings_cubit.dart';
 import '../cubit/sightings_state.dart';
 import '../../../../core/utils/app_formatters.dart';
 import '../../../../shared/widgets/location_preview_card.dart';
+import '../../../../shared/widgets/app_badges.dart';
 
 /// Екран деталей одного свідчення.
 class SightingDetailsScreen extends StatefulWidget {
@@ -27,32 +28,6 @@ class _SightingDetailsScreenState extends State<SightingDetailsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SightingsCubit>().loadSightingById(widget.sightingId);
     });
-  }
-
-  String _confidenceLabel(String confidence) {
-    switch (confidence) {
-      case 'high':
-        return 'Висока';
-      case 'medium':
-        return 'Середня';
-      case 'low':
-        return 'Низька';
-      default:
-        return confidence;
-    }
-  }
-
-    String _statusLabel(String status) {
-    switch (status) {
-      case 'active':
-        return 'Активне';
-      case 'confirmed':
-        return 'Підтверджене';
-      case 'rejected':
-        return 'Відхилене';
-      default:
-        return status;
-    }
   }
 
   @override
@@ -125,10 +100,17 @@ class _SightingDetailsScreenState extends State<SightingDetailsScreen> {
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 12),
-                  Chip(
-                    label: Text(
-                      'Впевненість: ${_confidenceLabel(sighting.confidenceLevel)}',
-                    ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      SightingStatusBadge(
+                        status: sighting.status,
+                      ),
+                      ConfidenceBadge(
+                        level: sighting.confidenceLevel,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                  _InfoRow(
@@ -138,11 +120,7 @@ class _SightingDetailsScreenState extends State<SightingDetailsScreen> {
                   _InfoRow(
                     label: 'Час',
                     value: AppFormatters.dateTimeFromIso(sighting.seenAt),
-                  ),
-                  _InfoRow(
-                    label: 'Статус',
-                    value: _statusLabel(sighting.status),
-                  ),  
+                  ), 
 
                   const SizedBox(height: 12),
 

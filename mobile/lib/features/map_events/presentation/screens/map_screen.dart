@@ -14,6 +14,7 @@ import '../cubit/map_events_state.dart';
 import '../widgets/map_event_card.dart';
 import '../../../settings/presentation/cubit/settings_cubit.dart';
 import '../../../../core/utils/app_formatters.dart';
+import '../../../../shared/widgets/app_badges.dart';
 
 /// Екран карти з активними подіями.
 /// Використовує реальне місцезнаходження користувача.
@@ -146,16 +147,33 @@ Future<void> _loadNearbyEvents() async {
         event.location.latitude,
         event.location.longitude,
       ),
-      width: 48,
-      height: 48,
+      width: 52,
+      height: 52,
       child: GestureDetector(
         onTap: () {
           _showEventBottomSheet(event);
         },
-        child: Icon(
-          icon,
-          color: color,
-          size: 42,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: color.withOpacity(0.24),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                blurRadius: 7,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: 29,
+          ),
         ),
       ),
     );
@@ -170,14 +188,18 @@ Future<void> _loadNearbyEvents() async {
         location.latitude,
         location.longitude,
       ),
-      width: 46,
-      height: 46,
+      width: 52,
+      height: 52,
       child: Tooltip(
         message: 'Ваше місцезнаходження',
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
             shape: BoxShape.circle,
+            border: Border.all(
+            color: Colors.blue.withOpacity(0.24),
+            width: 1.5,
+          ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.18),
@@ -214,6 +236,10 @@ Future<void> _loadNearbyEvents() async {
                 ),
               ),
               const SizedBox(height: 8),
+              MapEventTypeBadge(
+                type: event.type,
+              ),
+              const SizedBox(height: 10),
               Text(event.description ?? 'Опис відсутній'),
               const SizedBox(height: 12),
               Text(
@@ -300,7 +326,7 @@ Future<void> _loadNearbyEvents() async {
                   message:
                       'Геолокацію вимкнено у налаштуваннях. '
                       'Показується тестова область.',
-                  onRetry: () {},
+                  onRetry: null,
                   isError: false,
                 )
               else if (locationState.status == CurrentLocationStatus.error)
@@ -457,11 +483,19 @@ class _LocationNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    final backgroundColor = isError
+        ? colorScheme.errorContainer
+        : colorScheme.primaryContainer;
+
+    final foregroundColor = isError
+        ? colorScheme.onErrorContainer
+        : colorScheme.onPrimaryContainer;
+
     return Container(
       width: double.infinity,
-      color: isError
-          ? Colors.orange.shade50
-          : Colors.blue.shade50,
+      color: backgroundColor,
       padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
       child: Row(
         children: [
@@ -469,17 +503,23 @@ class _LocationNotice extends StatelessWidget {
             isError
                 ? Icons.location_off_outlined
                 : Icons.my_location,
-            color: isError
-                ? Colors.orange.shade800
-                : Colors.blue.shade800,
+            color: foregroundColor,
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(message),
+            child: Text(
+              message,
+              style: TextStyle(
+                color: foregroundColor,
+              ),
+            ),
           ),
           if (onRetry != null)
             TextButton(
               onPressed: onRetry,
+              style: TextButton.styleFrom(
+                foregroundColor: foregroundColor,
+              ),
               child: const Text('Оновити'),
             ),
         ],

@@ -8,6 +8,7 @@ import '../cubit/pets_cubit.dart';
 import '../cubit/pets_state.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/utils/app_formatters.dart';
+import '../../../../shared/widgets/app_badges.dart';
 
 /// Екран деталей тварини.
 class PetDetailsScreen extends StatefulWidget {
@@ -160,21 +161,6 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
     }
   }
 
-  String _statusLabel(String status) {
-    switch (status) {
-      case 'owned':
-        return 'Вдома';
-      case 'lost':
-        return 'Зникла';
-      case 'found':
-        return 'Знайдена';
-      case 'archived':
-        return 'Архів';
-      default:
-        return status;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<PetsCubit, PetsState>(
@@ -313,8 +299,8 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                       ),
                       const SizedBox(height: 8),
 
-                      Chip(
-                        label: Text(_statusLabel(pet.status)),
+                      PetStatusBadge(
+                        status: pet.status,
                       ),
                       const SizedBox(height: 16),
 
@@ -343,16 +329,16 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
 
                       const SizedBox(height: 24),
 
-                      FilledButton.icon(
+                      FilledButton.tonalIcon(
                         onPressed: () {
                           context.push('/pets/${widget.petId}/qr');
                         },
                         icon: const Icon(Icons.qr_code),
-                        label: const Text('QR-код'),
+                        label: const Text('Показати QR-код'),
                       ),
                       const SizedBox(height: 8),
 
-                     OutlinedButton.icon(
+                     FilledButton.icon(
                       onPressed: () {
                         if (pet.status == 'lost') {
                           showDialog<void>(
@@ -387,7 +373,7 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
 
                         context.push('/lost-reports/create/${widget.petId}');
                       },
-                      icon: const Icon(Icons.campaign_outlined),
+                      icon: const Icon(Icons.campaign),
                       label: Text(
                         pet.status == 'lost' ? 'SOS уже активне' : 'Створити SOS',
                       ),

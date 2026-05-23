@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/models/sighting_model.dart';
 import '../../../../core/utils/app_formatters.dart';
+import '../../../../shared/widgets/app_badges.dart';
 
 /// Картка свідчення у списку деталей SOS.
 class SightingCard extends StatelessWidget {
@@ -13,32 +14,6 @@ class SightingCard extends StatelessWidget {
     required this.sighting,
     required this.onTap,
   });
-
-  String get _confidenceLabel {
-    switch (sighting.confidenceLevel) {
-      case 'high':
-        return 'Висока впевненість';
-      case 'medium':
-        return 'Середня впевненість';
-      case 'low':
-        return 'Низька впевненість';
-      default:
-        return sighting.confidenceLevel;
-    }
-  }
-
-  Color _confidenceColor() {
-    switch (sighting.confidenceLevel) {
-      case 'high':
-        return Colors.green.shade100;
-      case 'medium':
-        return Colors.orange.shade100;
-      case 'low':
-        return Colors.grey.shade200;
-      default:
-        return Colors.blueGrey.shade100;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,11 +48,9 @@ class SightingCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 8),
-                    Chip(
-                      label: Text(_confidenceLabel),
-                      backgroundColor: _confidenceColor(),
-                      visualDensity: VisualDensity.compact,
-                    ),
+                   ConfidenceBadge(
+                    level: sighting.confidenceLevel,
+                  ),
                   ],
                 ),
               ),

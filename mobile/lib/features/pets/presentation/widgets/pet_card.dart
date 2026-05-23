@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/config/app_config.dart';
 import '../../data/models/pet_model.dart';
+import '../../../../shared/widgets/app_badges.dart';
 
 /// Картка тварини у списку.
 class PetCard extends StatelessWidget {
@@ -28,34 +29,6 @@ class PetCard extends StatelessWidget {
         return 'Гризун';
       default:
         return 'Інше';
-    }
-  }
-
-  String get _statusLabel {
-    switch (pet.status) {
-      case 'owned':
-        return 'Вдома';
-      case 'lost':
-        return 'Зникла';
-      case 'found':
-        return 'Знайдена';
-      case 'archived':
-        return 'Архів';
-      default:
-        return pet.status;
-    }
-  }
-
-  Color _statusColor(BuildContext context) {
-    switch (pet.status) {
-      case 'lost':
-        return Colors.red.shade100;
-      case 'owned':
-        return Colors.green.shade100;
-      case 'found':
-        return Colors.blue.shade100;
-      default:
-        return Theme.of(context).colorScheme.surfaceContainerHighest;
     }
   }
 
@@ -116,10 +89,8 @@ class PetCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 8),
-                    Chip(
-                      label: Text(_statusLabel),
-                      backgroundColor: _statusColor(context),
-                      visualDensity: VisualDensity.compact,
+                   PetStatusBadge(
+                      status: pet.status,
                     ),
                   ],
                 ),

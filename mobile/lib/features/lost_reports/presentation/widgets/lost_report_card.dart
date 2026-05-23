@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/models/lost_report_model.dart';
 import '../../../../core/utils/app_formatters.dart';
+import '../../../../shared/widgets/app_badges.dart';
 
 /// Картка SOS у списку.
 class LostReportCard extends StatelessWidget {
@@ -100,10 +101,8 @@ class LostReportCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 8),
-                    Chip(
-                      label: const Text('SOS активне'),
-                      backgroundColor: Colors.red.shade100,
-                      visualDensity: VisualDensity.compact,
+                    ReportStatusBadge(
+                      status: report.status,
                     ),
                   ],
                 ),

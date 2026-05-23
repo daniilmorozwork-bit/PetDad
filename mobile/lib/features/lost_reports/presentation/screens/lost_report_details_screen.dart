@@ -11,6 +11,7 @@ import '../cubit/lost_reports_cubit.dart';
 import '../cubit/lost_reports_state.dart';
 import '../../../../core/utils/app_formatters.dart';
 import '../../../../shared/widgets/location_preview_card.dart';
+import '../../../../shared/widgets/app_badges.dart';
 
 /// Екран деталей SOS.
 class LostReportDetailsScreen extends StatefulWidget {
@@ -127,19 +128,6 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
     commentController.dispose();
   }
 
-  String _statusLabel(String status) {
-    switch (status) {
-      case 'active':
-        return 'Активне';
-      case 'closed':
-        return 'Закрите';
-      case 'cancelled':
-        return 'Скасоване';
-      default:
-        return status;
-    }
-  }
-
     String _closeReasonLabel(String? reason) {
     switch (reason) {
       case 'pet_found':
@@ -254,11 +242,8 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
-                  Chip(
-                    label: Text(_statusLabel(report.status)),
-                    backgroundColor: report.status == 'active'
-                        ? Colors.red.shade100
-                        : Colors.green.shade100,
+                  ReportStatusBadge(
+                    status: report.status,
                   ),
                   const SizedBox(height: 16),
                   _InfoRow(

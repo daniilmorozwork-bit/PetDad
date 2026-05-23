@@ -239,16 +239,22 @@ Marker _buildCurrentLocationMarker(CurrentLocationModel location) {
 
               if (!settings.useCurrentLocation) ...[
                 Card(
-                  color: Colors.grey.shade100,
-                  child: const Padding(
-                    padding: EdgeInsets.all(12),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
                     child: Row(
                       children: [
-                        Icon(Icons.location_disabled_outlined),
-                        SizedBox(width: 10),
+                        Icon(
+                          Icons.location_disabled_outlined,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             'Використання геолокації вимкнено. Показується тестова область.',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
                           ),
                         ),
                       ],
@@ -256,28 +262,32 @@ Marker _buildCurrentLocationMarker(CurrentLocationModel location) {
                   ),
                 ),
                 const SizedBox(height: 12),
-              ] else 
-
-              if (locationState.status == CurrentLocationStatus.error) ...[
+              ] else if (locationState.status == CurrentLocationStatus.error) ...[
                 Card(
-                  color: Colors.orange.shade50,
+                  color: Theme.of(context).colorScheme.errorContainer,
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Row(
                       children: [
                         Icon(
                           Icons.location_off_outlined,
-                          color: Colors.orange.shade800,
+                          color: Theme.of(context).colorScheme.onErrorContainer,
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             '${locationState.errorMessage ?? 'Геолокація недоступна.'} '
                             'Показується тестова область.',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onErrorContainer,
+                            ),
                           ),
                         ),
                         TextButton(
                           onPressed: _refreshHomeData,
+                          style: TextButton.styleFrom(
+                            foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
+                          ),
                           child: const Text('Повторити'),
                         ),
                       ],
@@ -287,14 +297,14 @@ Marker _buildCurrentLocationMarker(CurrentLocationModel location) {
                 const SizedBox(height: 12),
               ] else if (_usingDeviceLocation && locationState.location != null) ...[
                 Card(
-                  color: Colors.blue.shade50,
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Row(
                       children: [
                         Icon(
                           Icons.my_location,
-                          color: Colors.blue.shade800,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -302,6 +312,9 @@ Marker _buildCurrentLocationMarker(CurrentLocationModel location) {
                             'Показуються події в радіусі '
                             '${AppFormatters.distance(settings.defaultSearchRadiusMeters)} '
                             'від вашої поточної позиції.',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            ),
                           ),
                         ),
                       ],

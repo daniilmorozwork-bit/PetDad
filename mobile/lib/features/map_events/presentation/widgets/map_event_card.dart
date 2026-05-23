@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/models/map_event_model.dart';
 import '../../../../core/utils/app_formatters.dart';
+import '../../../../shared/widgets/app_badges.dart';
 
 /// Картка події карти у списку під картою.
 class MapEventCard extends StatelessWidget {
@@ -13,19 +14,6 @@ class MapEventCard extends StatelessWidget {
     required this.event,
     required this.onTap,
   });
-
-  Color _chipColor() {
-    switch (event.type) {
-      case 'lost_pet':
-        return Colors.red.shade100;
-      case 'sighting':
-        return Colors.orange.shade100;
-      case 'found_pet':
-        return Colors.green.shade100;
-      default:
-        return Colors.blueGrey.shade100;
-    }
-  }
 
   IconData _icon() {
     switch (event.type) {
@@ -90,11 +78,9 @@ class MapEventCard extends StatelessWidget {
                       spacing: 8,
                       runSpacing: 4,
                       children: [
-                        Chip(
-                          label: Text(event.typeLabel),
-                          backgroundColor: _chipColor(),
-                          visualDensity: VisualDensity.compact,
-                        ),
+                        MapEventTypeBadge(
+                        type: event.type,
+                      ),
                         if (distance != null)
                           Chip(
                             label: Text(distance),
