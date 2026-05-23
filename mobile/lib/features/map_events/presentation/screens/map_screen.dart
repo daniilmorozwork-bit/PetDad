@@ -4,14 +4,18 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../../shared/widgets/app_section_scaffold.dart';
+import '../../../current_location/data/models/current_location_model.dart';
+import '../../../current_location/presentation/cubit/current_location_cubit.dart';
+import '../../../current_location/presentation/cubit/current_location_state.dart';
 import '../../data/models/map_event_model.dart';
 import '../cubit/map_events_cubit.dart';
 import '../cubit/map_events_state.dart';
 import '../widgets/map_event_card.dart';
-import '../../../../shared/widgets/app_section_scaffold.dart';
 
-/// Екран карти з подіями.
-/// Поки що використовує фіксований центр. GPS додамо окремим блоком.
+/// Екран карти з активними подіями.
+/// Використовує реальне місцезнаходження користувача.
+/// Якщо доступ до геолокації не надано, показує тестову область.
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
 
@@ -20,12 +24,14 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  static const double _defaultLatitude = 50.4501;
-  static const double _defaultLongitude = 30.5234;
+  /// Резервна тестова позиція, якщо користувач не дозволив геолокацію.
+  static const LatLng _fallbackCenter = LatLng(50.4501, 30.5234);
   static const int _defaultRadiusMeters = 5000;
 
   final MapController _mapController = MapController();
 
+  LatLng _searchCenter = _fallbackCenter;
+  bool _usingDeviceLocation = false;
   String? _selectedType;
 
   @override
@@ -33,26 +39,61 @@ class _MapScreenState extends State<MapScreen> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadNearbyEvents();
+      _locateAndLoadEvents();
     });
   }
 
+  /// Отримує поточну позицію та завантажує події поблизу неї.
+  Future<void> _locateAndLoadEvents() async {
+    final location =
+        await context.read<CurrentLocationCubit>().loadCurrentLocation();
+
+    if (!mounted) {
+      return;
+    }
+
+    if (location != null) {
+      final center = LatLng(
+        location.latitude,
+        location.longitude,
+      );
+
+      setState(() {
+        _searchCenter = center;
+        _usingDeviceLocation = true;
+      });
+
+      _mapController.move(center, 13);
+    } else {
+      setState(() {
+        _searchCenter = _fallbackCenter;
+        _usingDeviceLocation = false;
+      });
+
+      _mapController.move(_fallbackCenter, 13);
+    }
+
+    await _loadNearbyEvents();
+  }
+
+  /// Завантажує події навколо поточного центру пошуку.
   Future<void> _loadNearbyEvents() async {
     await context.read<MapEventsCubit>().loadNearbyEvents(
-          latitude: _defaultLatitude,
-          longitude: _defaultLongitude,
+          latitude: _searchCenter.latitude,
+          longitude: _searchCenter.longitude,
           radiusMeters: _defaultRadiusMeters,
           type: _selectedType,
         );
   }
 
+  /// Відкриває повʼязану сутність події.
   void _openEvent(MapEventModel event) {
     if (event.isLostPetEvent && event.sourceEntityId != null) {
       context.push('/lost-reports/${event.sourceEntityId}');
       return;
     }
 
-   if (event.isSightingEvent && event.sourceEntityId != null) {
+    if (event.isSightingEvent && event.sourceEntityId != null) {
       context.push('/sightings/${event.sourceEntityId}');
       return;
     }
@@ -60,18 +101,12 @@ class _MapScreenState extends State<MapScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        SnackBar(
-          content: Text(event.title),
-        ),
+        SnackBar(content: Text(event.title)),
       );
   }
 
-  Marker _buildMarker(MapEventModel event) {
-    final point = LatLng(
-      event.location.latitude,
-      event.location.longitude,
-    );
-
+  /// Створює маркер події.
+  Marker _buildEventMarker(MapEventModel event) {
     final color = switch (event.type) {
       'lost_pet' => Colors.red,
       'sighting' => Colors.orange,
@@ -87,19 +122,54 @@ class _MapScreenState extends State<MapScreen> {
     };
 
     return Marker(
-      point: point,
+      point: LatLng(
+        event.location.latitude,
+        event.location.longitude,
+      ),
       width: 48,
       height: 48,
       child: GestureDetector(
         onTap: () {
-          context.read<MapEventsCubit>().selectEventById(event.id);
-
           _showEventBottomSheet(event);
         },
         child: Icon(
           icon,
           color: color,
           size: 42,
+        ),
+      ),
+    );
+  }
+
+  /// Створює синій маркер поточної позиції користувача.
+  Marker _buildCurrentLocationMarker(
+    CurrentLocationModel location,
+  ) {
+    return Marker(
+      point: LatLng(
+        location.latitude,
+        location.longitude,
+      ),
+      width: 46,
+      height: 46,
+      child: Tooltip(
+        message: 'Ваше місцезнаходження',
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                blurRadius: 6,
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.my_location,
+            color: Colors.blue.shade700,
+            size: 28,
+          ),
         ),
       ),
     );
@@ -127,8 +197,15 @@ class _MapScreenState extends State<MapScreen> {
               Text(event.description ?? 'Опис відсутній'),
               const SizedBox(height: 12),
               Text(
-                'Координати: ${event.location.latitude}, ${event.location.longitude}',
+                'Координати: '
+                '${event.location.latitude}, ${event.location.longitude}',
               ),
+              if (event.distanceMeters != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Відстань: ${event.distanceMeters!.round()} м',
+                ),
+              ],
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: () {
@@ -155,6 +232,8 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final locationState = context.watch<CurrentLocationCubit>().state;
+
     return BlocConsumer<MapEventsCubit, MapEventsState>(
       listener: (context, state) {
         if (state.errorMessage != null) {
@@ -168,33 +247,59 @@ class _MapScreenState extends State<MapScreen> {
         }
       },
       builder: (context, state) {
-        final center = const LatLng(
-          _defaultLatitude,
-          _defaultLongitude,
-        );
-
-        final markers = state.events.map(_buildMarker).toList();
+        final markers = <Marker>[
+          ...state.events.map(_buildEventMarker),
+          if (locationState.location != null)
+            _buildCurrentLocationMarker(locationState.location!),
+        ];
 
         return AppSectionScaffold(
           title: 'Карта подій',
           currentRoute: '/map',
           actions: [
             IconButton(
+              onPressed: locationState.isLoading
+                  ? null
+                  : _locateAndLoadEvents,
+              icon: const Icon(Icons.my_location),
+              tooltip: 'Моє місцезнаходження',
+            ),
+            IconButton(
               onPressed: state.isLoading ? null : _loadNearbyEvents,
               icon: const Icon(Icons.refresh),
-              tooltip: 'Оновити',
+              tooltip: 'Оновити події',
             ),
           ],
           body: Column(
             children: [
+              if (locationState.status == CurrentLocationStatus.error)
+                _LocationNotice(
+                  message:
+                      '${locationState.errorMessage ?? 'Геолокація недоступна.'} '
+                      'Показується тестова область.',
+                  onRetry: _locateAndLoadEvents,
+                  isError: true,
+                )
+              else if (_usingDeviceLocation &&
+                  locationState.location != null)
+                _LocationNotice(
+                  message:
+                      'Ваше місцезнаходження: '
+                      '${locationState.location!.latitude.toStringAsFixed(5)}, '
+                      '${locationState.location!.longitude.toStringAsFixed(5)} '
+                      '± ${locationState.location!.accuracyMeters} м',
+                  onRetry: _locateAndLoadEvents,
+                  isError: false,
+                ),
+
               SizedBox(
-                height: 360,
+                height: 340,
                 child: Stack(
                   children: [
                     FlutterMap(
                       mapController: _mapController,
                       options: MapOptions(
-                        initialCenter: center,
+                        initialCenter: _searchCenter,
                         initialZoom: 13,
                       ),
                       children: [
@@ -203,13 +308,10 @@ class _MapScreenState extends State<MapScreen> {
                               'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                           userAgentPackageName: 'com.petdad.app',
                         ),
-                        MarkerLayer(
-                          markers: markers,
-                        ),
+                        MarkerLayer(markers: markers),
                       ],
                     ),
-
-                    if (state.isLoading)
+                    if (state.isLoading || locationState.isLoading)
                       Positioned.fill(
                         child: Container(
                           color: Colors.black.withOpacity(0.08),
@@ -224,57 +326,45 @@ class _MapScreenState extends State<MapScreen> {
 
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String?>(
-                        value: _selectedType,
-                        decoration: const InputDecoration(
-                          labelText: 'Тип події',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: const [
-                          DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('Усі події'),
-                          ),
-                          DropdownMenuItem<String?>(
-                            value: 'lost_pet',
-                            child: Text('SOS'),
-                          ),
-                          DropdownMenuItem<String?>(
-                            value: 'sighting',
-                            child: Text('Свідчення'),
-                          ),
-                          DropdownMenuItem<String?>(
-                            value: 'found_pet',
-                            child: Text('Знайдені'),
-                          ),
-                        ],
-                        onChanged: state.isLoading ? null : _changeFilter,
-                      ),
+                child: DropdownButtonFormField<String?>(
+                  initialValue: _selectedType,
+                  decoration: const InputDecoration(
+                    labelText: 'Тип події',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('Усі події'),
+                    ),
+                    DropdownMenuItem<String?>(
+                      value: 'lost_pet',
+                      child: Text('SOS'),
+                    ),
+                    DropdownMenuItem<String?>(
+                      value: 'sighting',
+                      child: Text('Свідчення'),
+                    ),
+                    DropdownMenuItem<String?>(
+                      value: 'found_pet',
+                      child: Text('Знайдені'),
                     ),
                   ],
+                  onChanged: state.isLoading ? null : _changeFilter,
                 ),
               ),
 
               Expanded(
                 child: Builder(
                   builder: (context) {
-                    if (state.events.isEmpty && state.isLoading) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    }
-
-                    if (state.events.isEmpty) {
+                    if (state.events.isEmpty && !state.isLoading) {
                       return RefreshIndicator(
                         onRefresh: _loadNearbyEvents,
                         child: ListView(
                           padding: const EdgeInsets.all(16),
                           children: const [
-                            SizedBox(height: 40),
-                            Icon(Icons.map_outlined, size: 72),
+                            SizedBox(height: 32),
+                            Icon(Icons.map_outlined, size: 64),
                             SizedBox(height: 16),
                             Text(
                               'Подій поруч немає',
@@ -286,7 +376,7 @@ class _MapScreenState extends State<MapScreen> {
                             ),
                             SizedBox(height: 8),
                             Text(
-                              'Після створення SOS або свідчення події зʼявляться тут.',
+                              'Події відображаються лише в обраному радіусі від вашої позиції.',
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -299,7 +389,8 @@ class _MapScreenState extends State<MapScreen> {
                       child: ListView.separated(
                         padding: const EdgeInsets.all(16),
                         itemCount: state.events.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final event = state.events[index];
 
@@ -317,6 +408,50 @@ class _MapScreenState extends State<MapScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Повідомлення про стан геолокації.
+class _LocationNotice extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  final bool isError;
+
+  const _LocationNotice({
+    required this.message,
+    required this.onRetry,
+    required this.isError,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: isError
+          ? Colors.orange.shade50
+          : Colors.blue.shade50,
+      padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+      child: Row(
+        children: [
+          Icon(
+            isError
+                ? Icons.location_off_outlined
+                : Icons.my_location,
+            color: isError
+                ? Colors.orange.shade800
+                : Colors.blue.shade800,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(message),
+          ),
+          TextButton(
+            onPressed: onRetry,
+            child: const Text('Оновити'),
+          ),
+        ],
+      ),
     );
   }
 }
