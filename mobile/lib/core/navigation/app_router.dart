@@ -20,6 +20,8 @@ import '../../features/lost_reports/presentation/screens/create_lost_report_scre
 import '../../features/lost_reports/presentation/screens/lost_report_details_screen.dart';
 import '../../features/lost_reports/presentation/screens/lost_reports_screen.dart';
 import '../../features/map_events/presentation/screens/map_screen.dart';
+import '../../features/sightings/presentation/screens/create_sighting_screen.dart';
+import '../../features/sightings/presentation/screens/sighting_details_screen.dart';
 
 /// Створення маршрутизатора застосунку.
 GoRouter createAppRouter(AuthCubit authCubit) {
@@ -126,6 +128,22 @@ GoRouter createAppRouter(AuthCubit authCubit) {
       GoRoute(
         path: '/map',
         builder: (context, state) => const MapScreen(),
+      ),
+      GoRoute(
+        path: '/lost-reports/:id/sightings/create',
+        builder: (context, state) {
+          final lostReportId = state.pathParameters['id']!;
+
+          return CreateSightingScreen(lostReportId: lostReportId);
+        },
+      ),
+      GoRoute(
+        path: '/sightings/:id',
+        builder: (context, state) {
+          final sightingId = state.pathParameters['id']!;
+
+          return SightingDetailsScreen(sightingId: sightingId);
+        },
       ),
     ],
   );

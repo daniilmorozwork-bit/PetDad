@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../auth/presentation/cubit/auth_cubit.dart';
+import '../../../auth/presentation/cubit/auth_state.dart';
+import '../../../sightings/presentation/cubit/sightings_cubit.dart';
+import '../../../sightings/presentation/cubit/sightings_state.dart';
+import '../../../sightings/presentation/widgets/sighting_card.dart';
 import '../cubit/lost_reports_cubit.dart';
 import '../cubit/lost_reports_state.dart';
 
@@ -25,6 +31,7 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<LostReportsCubit>().loadLostReportById(widget.reportId);
+      context.read<SightingsCubit>().loadSightingsByLostReport(widget.reportId);
     });
   }
 
@@ -43,7 +50,7 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
-                    value: closeReason,
+                    initialValue: closeReason,
                     decoration: const InputDecoration(
                       labelText: 'Причина закриття',
                       border: OutlineInputBorder(),
@@ -67,7 +74,9 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
                       ),
                     ],
                     onChanged: (value) {
-                      if (value == null) return;
+                      if (value == null) {
+                        return;
+                      }
 
                       setDialogState(() {
                         closeReason = value;
@@ -81,7 +90,6 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
                     maxLines: 4,
                     decoration: const InputDecoration(
                       labelText: 'Коментар',
-                      hintText: 'Наприклад: тварину знайшли біля будинку',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -103,11 +111,8 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
       },
     );
 
-    if (confirmed != true) {
-      return;
-    }
-
-    if (!mounted) {
+    if (confirmed != true || !mounted) {
+      commentController.dispose();
       return;
     }
 
@@ -116,6 +121,8 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
           closeReason: closeReason,
           closeComment: commentController.text,
         );
+
+    commentController.dispose();
   }
 
   String _statusLabel(String status) {
@@ -133,6 +140,8 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthCubit>().state;
+
     return BlocConsumer<LostReportsCubit, LostReportsState>(
       listener: (context, state) {
         if (state.errorMessage != null) {
@@ -158,11 +167,15 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
       builder: (context, state) {
         final report = state.selectedReport;
 
+        final isOwner = report != null &&
+            authState is AuthAuthenticated &&
+            authState.user.id == report.ownerId;
+
         return Scaffold(
           appBar: AppBar(
             title: const Text('Деталі SOS'),
             actions: [
-              if (report?.status == 'active')
+              if (report?.status == 'active' && isOwner)
                 IconButton(
                   onPressed: state.isLoading ? null : _closeReport,
                   icon: const Icon(Icons.check_circle_outline),
@@ -219,13 +232,11 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-
                   Text(
                     'Зникла тварина: ${report.pet.name}',
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
-
                   Chip(
                     label: Text(_statusLabel(report.status)),
                     backgroundColor: report.status == 'active'
@@ -233,7 +244,6 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
                         : Colors.green.shade100,
                   ),
                   const SizedBox(height: 16),
-
                   _InfoRow(label: 'Опис', value: report.description),
                   _InfoRow(
                     label: 'Останній раз бачили',
@@ -258,7 +268,6 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
                         ? 'Не вказано'
                         : '${report.rewardAmount}',
                   ),
-
                   if (report.closedAt != null) ...[
                     const Divider(height: 32),
                     _InfoRow(
@@ -274,15 +283,70 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
                       value: report.closeComment ?? 'Не вказано',
                     ),
                   ],
-
-                  const SizedBox(height: 24),
-
-                  if (report.status == 'active')
+                  const SizedBox(height: 20),
+                  if (report.status == 'active' && isOwner)
                     FilledButton.icon(
                       onPressed: state.isLoading ? null : _closeReport,
                       icon: const Icon(Icons.check_circle_outline),
                       label: const Text('Закрити SOS'),
                     ),
+                  if (report.status == 'active' && !isOwner)
+                    FilledButton.icon(
+                      onPressed: () {
+                        context.push(
+                          '/lost-reports/${report.id}/sightings/create',
+                        );
+                      },
+                      icon: const Icon(Icons.visibility_outlined),
+                      label: const Text('Я бачив цю тварину'),
+                    ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Свідчення',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  BlocBuilder<SightingsCubit, SightingsState>(
+                    builder: (context, sightingsState) {
+                      if (sightingsState.isLoading &&
+                          sightingsState.sightings.isEmpty) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(20),
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+
+                      if (sightingsState.sightings.isEmpty) {
+                        return const Card(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text(
+                              'Свідчень поки немає.',
+                            ),
+                          ),
+                        );
+                      }
+
+                      return Column(
+                        children: sightingsState.sightings.map((sighting) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: SightingCard(
+                              sighting: sighting,
+                              onTap: () {
+                                context.push('/sightings/${sighting.id}');
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
                 ],
               );
             },
@@ -293,7 +357,7 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
   }
 }
 
-/// Рядок даних.
+/// Рядок даних SOS.
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;

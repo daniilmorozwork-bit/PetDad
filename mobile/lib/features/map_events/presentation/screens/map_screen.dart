@@ -51,16 +51,8 @@ class _MapScreenState extends State<MapScreen> {
       return;
     }
 
-    if (event.isSightingEvent) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Деталі свідчень додамо в наступному модулі',
-            ),
-          ),
-        );
+   if (event.isSightingEvent && event.sourceEntityId != null) {
+      context.push('/sightings/${event.sourceEntityId}');
       return;
     }
 
