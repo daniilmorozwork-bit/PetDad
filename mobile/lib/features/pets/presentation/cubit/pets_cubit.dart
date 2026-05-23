@@ -123,6 +123,64 @@ class PetsCubit extends Cubit<PetsState> {
     }
   }
 
+
+      /// Оновлює дані профілю тварини.
+  Future<void> updatePet({
+    required String petId,
+    required String name,
+    required String species,
+    required String gender,
+    required String color,
+    String? breed,
+    String? birthDate,
+    double? weightKg,
+    String? specialMarks,
+    String? chipNumber,
+    bool isPublic = true,
+  }) async {
+    emit(
+      state.copyWith(
+        isLoading: true,
+        clearError: true,
+        clearSuccess: true,
+      ),
+    );
+
+    try {
+      final updatedPet = await _petsRepository.updatePet(
+        petId: petId,
+        name: name,
+        species: species,
+        gender: gender,
+        color: color,
+        breed: breed,
+        birthDate: birthDate,
+        weightKg: weightKg,
+        specialMarks: specialMarks,
+        chipNumber: chipNumber,
+        isPublic: isPublic,
+      );
+
+      final pets = await _petsRepository.getMyPets();
+
+      emit(
+        state.copyWith(
+          isLoading: false,
+          selectedPet: updatedPet,
+          pets: pets,
+          successMessage: 'Профіль тварини оновлено',
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          isLoading: false,
+          errorMessage: error.toString().replaceFirst('Exception: ', ''),
+        ),
+      );
+    }
+  }
+  
   /// Завантажує фото тварини.
   Future<void> uploadPetPhoto({
     required String petId,

@@ -206,7 +206,18 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
             title: Text(pet?.name ?? 'Профіль тварини'),
             actions: [
               IconButton(
-                onPressed: state.isLoading ? null : _confirmDeletePet,
+                onPressed: state.isLoading || pet == null
+                    ? null
+                    : () {
+                        context.push('/pets/${widget.petId}/edit');
+                      },
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'Редагувати',
+              ),
+              IconButton(
+                onPressed: state.isLoading || pet == null
+                    ? null
+                    : _confirmDeletePet,
                 icon: const Icon(Icons.archive_outlined),
                 tooltip: 'Архівувати',
               ),

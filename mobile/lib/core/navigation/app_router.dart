@@ -23,6 +23,7 @@ import '../../features/map_events/presentation/screens/map_screen.dart';
 import '../../features/sightings/presentation/screens/create_sighting_screen.dart';
 import '../../features/sightings/presentation/screens/sighting_details_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
+import '../../features/pets/presentation/screens/edit_pet_screen.dart';
 
 /// Створення маршрутизатора застосунку.
 GoRouter createAppRouter(AuthCubit authCubit) {
@@ -121,6 +122,14 @@ GoRouter createAppRouter(AuthCubit authCubit) {
           final petId = state.pathParameters['id']!;
 
           return PetQrScreen(petId: petId);
+        },
+      ),
+      GoRoute(
+        path: '/pets/:id/edit',
+        builder: (context, state) {
+          final petId = state.pathParameters['id']!;
+
+          return EditPetScreen(petId: petId);
         },
       ),
       GoRoute(

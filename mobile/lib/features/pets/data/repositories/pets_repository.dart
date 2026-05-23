@@ -76,6 +76,43 @@ class PetsRepository {
     }
   }
 
+    /// Оновлює основні дані профілю тварини.
+  Future<PetModel> updatePet({
+    required String petId,
+    required String name,
+    required String species,
+    required String gender,
+    required String color,
+    String? breed,
+    String? birthDate,
+    double? weightKg,
+    String? specialMarks,
+    String? chipNumber,
+    bool isPublic = true,
+  }) async {
+    try {
+      final response = await _apiClient.dio.patch(
+        '/pets/$petId',
+        data: {
+          'name': name.trim(),
+          'species': species,
+          'breed': _emptyToNull(breed),
+          'gender': gender,
+          'birthDate': _emptyToNull(birthDate),
+          'color': color.trim(),
+          'weightKg': weightKg,
+          'specialMarks': _emptyToNull(specialMarks),
+          'chipNumber': _emptyToNull(chipNumber),
+          'isPublic': isPublic,
+        },
+      );
+
+      return PetModel.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (error) {
+      throw _handleDioError(error);
+    }
+  }
+
   /// Завантажує фото тварини.
   Future<PetPhotoModel> uploadPetPhoto({
     required String petId,
