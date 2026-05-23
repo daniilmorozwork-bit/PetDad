@@ -8,6 +8,7 @@ import '../../data/models/map_event_model.dart';
 import '../cubit/map_events_cubit.dart';
 import '../cubit/map_events_state.dart';
 import '../widgets/map_event_card.dart';
+import '../../../../shared/widgets/app_section_scaffold.dart';
 
 /// Екран карти з подіями.
 /// Поки що використовує фіксований центр. GPS додамо окремим блоком.
@@ -174,17 +175,16 @@ class _MapScreenState extends State<MapScreen> {
 
         final markers = state.events.map(_buildMarker).toList();
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Карта подій'),
-            actions: [
-              IconButton(
-                onPressed: state.isLoading ? null : _loadNearbyEvents,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Оновити',
-              ),
-            ],
-          ),
+        return AppSectionScaffold(
+          title: 'Карта подій',
+          currentRoute: '/map',
+          actions: [
+            IconButton(
+              onPressed: state.isLoading ? null : _loadNearbyEvents,
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Оновити',
+            ),
+          ],
           body: Column(
             children: [
               SizedBox(

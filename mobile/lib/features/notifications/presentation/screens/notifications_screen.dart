@@ -6,6 +6,7 @@ import '../../data/models/notification_model.dart';
 import '../cubit/notifications_cubit.dart';
 import '../cubit/notifications_state.dart';
 import '../widgets/notification_card.dart';
+import '../../../../shared/widgets/app_section_scaffold.dart';
 
 /// Екран повідомлень поточного користувача.
 class NotificationsScreen extends StatefulWidget {
@@ -89,23 +90,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 .toList()
             : state.notifications;
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Повідомлення'),
-            actions: [
-              IconButton(
-                onPressed: state.isLoading
-                    ? null
-                    : () {
-                        context
-                            .read<NotificationsCubit>()
-                            .loadNotifications();
-                      },
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Оновити',
-              ),
-            ],
-          ),
+        return AppSectionScaffold(
+          title: 'Повідомлення',
+          currentRoute: '/notifications',
+          actions: [
+            IconButton(
+              onPressed: state.isLoading
+                  ? null
+                  : () {
+                      context
+                          .read<NotificationsCubit>()
+                          .loadNotifications();
+                    },
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Оновити',
+            ),
+          ],
           body: RefreshIndicator(
             onRefresh: () =>
                 context.read<NotificationsCubit>().loadNotifications(),

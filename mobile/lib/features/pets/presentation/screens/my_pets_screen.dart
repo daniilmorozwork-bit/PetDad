@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../cubit/pets_cubit.dart';
 import '../cubit/pets_state.dart';
 import '../widgets/pet_card.dart';
+import '../../../../shared/widgets/app_section_scaffold.dart';
 
 /// Екран списку тварин користувача.
 class MyPetsScreen extends StatefulWidget {
@@ -49,10 +50,9 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
         }
       },
       builder: (context, state) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Мої тварини'),
-          ),
+        return AppSectionScaffold(
+          title: 'Мої тварини',
+          currentRoute: '/pets',
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () {
               context.push('/pets/create');

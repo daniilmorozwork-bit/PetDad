@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../cubit/lost_reports_cubit.dart';
 import '../cubit/lost_reports_state.dart';
 import '../widgets/lost_report_card.dart';
+import '../../../../shared/widgets/app_section_scaffold.dart';
 
 /// Екран активних SOS-оголошень.
 class LostReportsScreen extends StatefulWidget {
@@ -49,10 +50,9 @@ class _LostReportsScreenState extends State<LostReportsScreen> {
         }
       },
       builder: (context, state) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('SOS-пошук'),
-          ),
+        return AppSectionScaffold(
+          title: 'SOS-пошук',
+          currentRoute: '/lost-reports',
           body: RefreshIndicator(
             onRefresh: () =>
                 context.read<LostReportsCubit>().loadLostReports(),
