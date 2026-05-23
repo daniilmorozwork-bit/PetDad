@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
-import '../cubit/sightings_cubit.dart';
-import '../cubit/sightings_state.dart';
+import '../../../../core/utils/app_formatters.dart';
+import '../../../../shared/screens/location_picker_screen.dart';
 import '../../../current_location/data/models/current_location_model.dart';
 import '../../../current_location/presentation/cubit/current_location_cubit.dart';
 import '../../../current_location/presentation/cubit/current_location_state.dart';
 import '../../../settings/presentation/cubit/settings_cubit.dart';
-
+import '../cubit/sightings_cubit.dart';
+import '../cubit/sightings_state.dart';
 
 /// Екран створення свідчення до активного SOS.
+/// Користувач повідомляє, де й коли бачив тварину.
 class CreateSightingScreen extends StatefulWidget {
   final String lostReportId;
 
@@ -25,60 +28,46 @@ class CreateSightingScreen extends StatefulWidget {
 
 class _CreateSightingScreenState extends State<CreateSightingScreen> {
   final _formKey = GlobalKey<FormState>();
-
-  final _latitudeController = TextEditingController();
-  final _longitudeController = TextEditingController();
-  final _accuracyController = TextEditingController();
-  final _seenAtController = TextEditingController();
   final _descriptionController = TextEditingController();
+
+  DateTime _seenAt = DateTime.now().subtract(const Duration(minutes: 1));
+
+  LatLng? _selectedPoint;
+  int? _accuracyMeters;
 
   String _confidenceLevel = 'medium';
   bool _showValidationErrors = false;
+  bool _pointChosenByUser = false;
 
- @override
-void initState() {
-  super.initState();
+  @override
+  void initState() {
+    super.initState();
 
-  final settings = context.read<SettingsCubit>().state;
+    final settings = context.read<SettingsCubit>().state;
 
-  _seenAtController.text = DateTime.now()
-      .subtract(const Duration(minutes: 1))
-      .toUtc()
-      .toIso8601String();
-
-  if (settings.useCurrentLocation) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fillCurrentCoordinates();
-    });
+    if (settings.useCurrentLocation) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fillCurrentCoordinates();
+      });
+    }
   }
-}
 
   @override
   void dispose() {
-    _latitudeController.dispose();
-    _longitudeController.dispose();
-    _accuracyController.dispose();
-    _seenAtController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
-    
-    /// Записує поточну позицію у поля свідчення.
-  void _setCoordinates(CurrentLocationModel location) {
-    _latitudeController.text = location.latitude.toStringAsFixed(6);
-    _longitudeController.text = location.longitude.toStringAsFixed(6);
-    _accuracyController.text = location.accuracyMeters.toString();
-  }
 
-  /// Автоматично підставляє поточну позицію.
-  /// Поля можна змінити, якщо свідчення стосується іншої точки.
+  /// Підставляє поточну позицію користувача у форму.
+  /// Автоматичне отримання координат не перезаписує точку,
+  /// яку користувач уже обрав на карті вручну.
   Future<void> _fillCurrentCoordinates({
-    bool forceRefresh = false,
+    bool requestedByUser = false,
   }) async {
     final locationCubit = context.read<CurrentLocationCubit>();
 
     final cachedLocation =
-        forceRefresh ? null : locationCubit.state.location;
+        requestedByUser ? null : locationCubit.state.location;
 
     final location =
         cachedLocation ?? await locationCubit.loadCurrentLocation();
@@ -87,40 +76,143 @@ void initState() {
       return;
     }
 
+    if (!requestedByUser && _pointChosenByUser) {
+      return;
+    }
+
+    _setLocationFromDevice(
+      location,
+      requestedByUser: requestedByUser,
+    );
+  }
+
+  /// Записує отриману позицію у стан форми.
+  void _setLocationFromDevice(
+    CurrentLocationModel location, {
+    required bool requestedByUser,
+  }) {
     setState(() {
-      _setCoordinates(location);
+      _selectedPoint = LatLng(
+        location.latitude,
+        location.longitude,
+      );
+      _accuracyMeters = location.accuracyMeters;
+
+      if (requestedByUser) {
+        _pointChosenByUser = true;
+      }
     });
   }
 
-  String? _validateCoordinate({
-    required String? value,
-    required String label,
-    required double min,
-    required double max,
-  }) {
-    final text = value?.trim() ?? '';
+  /// Відкриває карту для вибору місця спостереження.
+  Future<void> _selectLocationOnMap() async {
+    final cachedLocation =
+        context.read<CurrentLocationCubit>().state.location;
 
-    if (text.isEmpty) {
-      return '$label є обовʼязковою';
+    final initialPoint = _selectedPoint ??
+        (cachedLocation == null
+            ? const LatLng(50.4501, 30.5234)
+            : LatLng(
+                cachedLocation.latitude,
+                cachedLocation.longitude,
+              ));
+
+    final selectedPoint = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute(
+        builder: (context) {
+          return LocationPickerScreen(
+            initialPoint: initialPoint,
+            title: 'Місце спостереження',
+            instructionText:
+                'Натисніть на карту в місці, де ви бачили тварину.',
+          );
+        },
+      ),
+    );
+
+    if (!mounted || selectedPoint == null) {
+      return;
     }
 
-    final number = double.tryParse(text);
+    setState(() {
+      _selectedPoint = selectedPoint;
 
-    if (number == null) {
-      return '$label має бути числом';
-    }
-
-    if (number < min || number > max) {
-      return '$label має бути в межах від $min до $max';
-    }
-
-    return null;
+      /// Для вручну вибраної точки GPS-точність не використовується.
+      _accuracyMeters = null;
+      _pointChosenByUser = true;
+    });
   }
 
+  /// Відкриває вибір дати й часу спостереження.
+  Future<void> _selectSeenDateTime() async {
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: _seenAt,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now(),
+      helpText: 'Коли ви бачили тварину?',
+      cancelText: 'Скасувати',
+      confirmText: 'Далі',
+    );
+
+    if (!mounted || selectedDate == null) {
+      return;
+    }
+
+    final selectedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_seenAt),
+      helpText: 'Оберіть приблизний час',
+      cancelText: 'Скасувати',
+      confirmText: 'Підтвердити',
+    );
+
+    if (!mounted || selectedTime == null) {
+      return;
+    }
+
+    final selectedDateTime = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+      selectedTime.hour,
+      selectedTime.minute,
+    );
+
+    if (selectedDateTime.isAfter(DateTime.now())) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Час спостереження не може бути в майбутньому',
+            ),
+          ),
+        );
+      return;
+    }
+
+    setState(() {
+      _seenAt = selectedDateTime;
+    });
+  }
+
+  /// Перевіряє форму та створює свідчення.
   Future<void> _createSighting() async {
     setState(() {
       _showValidationErrors = true;
     });
+
+    if (_selectedPoint == null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Оберіть місце, де ви бачили тварину'),
+          ),
+        );
+      return;
+    }
 
     final isValid = _formKey.currentState?.validate() ?? false;
 
@@ -137,10 +229,10 @@ void initState() {
 
     await context.read<SightingsCubit>().createSighting(
           lostReportId: widget.lostReportId,
-          latitude: double.parse(_latitudeController.text.trim()),
-          longitude: double.parse(_longitudeController.text.trim()),
-          accuracyMeters: int.tryParse(_accuracyController.text.trim()),
-          seenAt: _seenAtController.text.trim(),
+          latitude: _selectedPoint!.latitude,
+          longitude: _selectedPoint!.longitude,
+          accuracyMeters: _accuracyMeters,
+          seenAt: _seenAt.toUtc().toIso8601String(),
           description: _descriptionController.text.trim(),
           confidenceLevel: _confidenceLevel,
         );
@@ -150,6 +242,7 @@ void initState() {
   Widget build(BuildContext context) {
     final locationState = context.watch<CurrentLocationCubit>().state;
     final settings = context.watch<SettingsCubit>().state;
+
     return BlocConsumer<SightingsCubit, SightingsState>(
       listener: (context, state) {
         if (state.successMessage != null) {
@@ -193,141 +286,80 @@ void initState() {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Text(
-                      'Повідомте, де бачили тварину',
+                      'Ви бачили цю тварину?',
                       style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 23,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 8),
-                   Text(
-                      settings.useCurrentLocation
-                          ? 'Координати автоматично заповнюються вашою поточною позицією. За потреби можна вказати інше місце вручну.'
-                          : 'Автоматичне визначення позиції вимкнено. Координати можна ввести вручну або отримати кнопкою нижче.',
-                    ),
-                    const SizedBox(height: 16),
-
-                    Card(
-                      color: locationState.status == CurrentLocationStatus.error
-                          ? Colors.orange.shade50
-                          : Colors.blue.shade50,
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  locationState.status == CurrentLocationStatus.error
-                                      ? Icons.location_off_outlined
-                                      : Icons.my_location,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    locationState.isLoading
-                                        ? 'Визначення поточної позиції...'
-                                        : locationState.location != null
-                                            ? 'Поточну позицію підставлено у форму.'
-                                            : locationState.errorMessage ??
-                                                'Натисніть кнопку, щоб визначити позицію.',
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            OutlinedButton.icon(
-                              onPressed: locationState.isLoading
-                                  ? null
-                                  : () {
-                                      _fillCurrentCoordinates(forceRefresh: true);
-                                    },
-                              icon: const Icon(Icons.my_location),
-                              label: const Text('Оновити мою позицію'),
-                            ),
-                          ],
-                        ),
-                      ),
+                    const Text(
+                      'Ваше повідомлення допоможе власнику уточнити напрямок пошуку.',
                     ),
                     const SizedBox(height: 20),
-                    TextFormField(
-                      controller: _latitudeController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Широта місця спостереження',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) => _validateCoordinate(
-                        value: value,
-                        label: 'Широта',
-                        min: -90,
-                        max: 90,
+
+                    const _SectionTitle(
+                      icon: Icons.location_on_outlined,
+                      title: 'Місце спостереження',
+                    ),
+                    const SizedBox(height: 10),
+
+                    _LocationCard(
+                      selectedPoint: _selectedPoint,
+                      accuracyMeters: _accuracyMeters,
+                      isLoading: locationState.isLoading,
+                      automaticLocationEnabled: settings.useCurrentLocation,
+                      errorMessage: locationState.errorMessage,
+                      onUseCurrentLocation: isLoading
+                          ? null
+                          : () {
+                              _fillCurrentCoordinates(
+                                requestedByUser: true,
+                              );
+                            },
+                      onSelectOnMap:
+                          isLoading ? null : _selectLocationOnMap,
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    const _SectionTitle(
+                      icon: Icons.schedule_outlined,
+                      title: 'Час спостереження',
+                    ),
+                    const SizedBox(height: 10),
+
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.calendar_month_outlined),
+                        title: const Text('Дата і час'),
+                        subtitle: Text(
+                          AppFormatters.dateTime(_seenAt),
+                        ),
+                        trailing: const Icon(Icons.edit_outlined),
+                        onTap: isLoading ? null : _selectSeenDateTime,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _longitudeController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Довгота місця спостереження',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) => _validateCoordinate(
-                        value: value,
-                        label: 'Довгота',
-                        min: -180,
-                        max: 180,
-                      ),
+
+                    const SizedBox(height: 20),
+
+                    const _SectionTitle(
+                      icon: Icons.notes_outlined,
+                      title: 'Що ви помітили',
                     ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _accuracyController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Точність координат, м',
-                        hintText: 'Необовʼязково',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _seenAtController,
-                      decoration: const InputDecoration(
-                        labelText: 'Час спостереження',
-                        hintText: 'ISO datetime',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        final text = value?.trim() ?? '';
+                    const SizedBox(height: 10),
 
-                        if (text.isEmpty) {
-                          return 'Час спостереження є обовʼязковим';
-                        }
-
-                        final date = DateTime.tryParse(text);
-
-                        if (date == null) {
-                          return 'Дата має бути у форматі ISO';
-                        }
-
-                        if (date.isAfter(DateTime.now())) {
-                          return 'Дата не може бути в майбутньому';
-                        }
-
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
                     TextFormField(
                       controller: _descriptionController,
                       minLines: 4,
                       maxLines: 6,
                       decoration: const InputDecoration(
-                        labelText: 'Опис',
+                        labelText: 'Опис спостереження',
                         hintText:
-                            'Де саме бачили тварину та в якому напрямку вона рухалася',
+                            'Наприклад: схожий собака перебіг дорогу біля '
+                            'магазину й побіг у бік парку...',
                         border: OutlineInputBorder(),
+                        alignLabelWithHint: true,
                       ),
                       validator: (value) {
                         final text = value?.trim() ?? '';
@@ -337,13 +369,21 @@ void initState() {
                         }
 
                         if (text.length < 10) {
-                          return 'Опис має бути детальнішим';
+                          return 'Додайте більше інформації';
                         }
 
                         return null;
                       },
                     ),
-                    const SizedBox(height: 12),
+
+                    const SizedBox(height: 20),
+
+                    const _SectionTitle(
+                      icon: Icons.verified_outlined,
+                      title: 'Наскільки ви впевнені',
+                    ),
+                    const SizedBox(height: 10),
+
                     DropdownButtonFormField<String>(
                       initialValue: _confidenceLevel,
                       decoration: const InputDecoration(
@@ -353,15 +393,15 @@ void initState() {
                       items: const [
                         DropdownMenuItem(
                           value: 'low',
-                          child: Text('Низький'),
+                          child: Text('Низький — можливо, схожа тварина'),
                         ),
                         DropdownMenuItem(
                           value: 'medium',
-                          child: Text('Середній'),
+                          child: Text('Середній — дуже схожа тварина'),
                         ),
                         DropdownMenuItem(
                           value: 'high',
-                          child: Text('Високий'),
+                          child: Text('Високий — майже впевнений/впевнена'),
                         ),
                       ],
                       onChanged: isLoading
@@ -376,13 +416,24 @@ void initState() {
                               });
                             },
                     ),
-                    const SizedBox(height: 20),
+
+                    const SizedBox(height: 26),
+
                     FilledButton.icon(
                       onPressed: isLoading ? null : _createSighting,
-                      icon: const Icon(Icons.visibility_outlined),
+                      icon: const Icon(Icons.send_outlined),
                       label: Text(
-                        isLoading ? 'Надсилання...' : 'Надіслати свідчення',
+                        isLoading
+                            ? 'Надсилання...'
+                            : 'Надіслати свідчення',
                       ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    Text(
+                      'Свідчення буде передано власнику та показано на карті подій.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
                 ),
@@ -391,6 +442,120 @@ void initState() {
           ),
         );
       },
+    );
+  }
+}
+
+/// Заголовок групи полів.
+class _SectionTitle extends StatelessWidget {
+  final IconData icon;
+  final String title;
+
+  const _SectionTitle({
+    required this.icon,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Картка вибору місця спостереження.
+class _LocationCard extends StatelessWidget {
+  final LatLng? selectedPoint;
+  final int? accuracyMeters;
+  final bool isLoading;
+  final bool automaticLocationEnabled;
+  final String? errorMessage;
+  final VoidCallback? onUseCurrentLocation;
+  final VoidCallback? onSelectOnMap;
+
+  const _LocationCard({
+    required this.selectedPoint,
+    required this.accuracyMeters,
+    required this.isLoading,
+    required this.automaticLocationEnabled,
+    required this.errorMessage,
+    required this.onUseCurrentLocation,
+    required this.onSelectOnMap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    String description;
+
+    if (isLoading) {
+      description = 'Визначення поточної позиції...';
+    } else if (selectedPoint != null) {
+      description = accuracyMeters == null
+          ? 'Точку спостереження вибрано на карті.'
+          : 'Поточну позицію визначено з точністю ± $accuracyMeters м.';
+    } else if (errorMessage != null) {
+      description = errorMessage!;
+    } else if (!automaticLocationEnabled) {
+      description =
+          'Автоматичне визначення позиції вимкнено. '
+          'Оберіть місце вручну або використайте свою позицію.';
+    } else {
+      description = 'Місце спостереження ще не вибрано.';
+    }
+
+    return Card(
+      color: selectedPoint == null
+          ? Theme.of(context).colorScheme.surfaceContainerLow
+          : Theme.of(context).colorScheme.primaryContainer.withOpacity(0.28),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  selectedPoint == null
+                      ? Icons.location_off_outlined
+                      : Icons.location_on,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(description),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: onUseCurrentLocation,
+              icon: const Icon(Icons.my_location),
+              label: const Text('Моя поточна позиція'),
+            ),
+            const SizedBox(height: 8),
+            FilledButton.tonalIcon(
+              onPressed: onSelectOnMap,
+              icon: const Icon(Icons.map_outlined),
+              label: const Text('Вибрати на карті'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
