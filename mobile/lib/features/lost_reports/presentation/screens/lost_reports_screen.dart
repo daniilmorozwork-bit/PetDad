@@ -7,6 +7,7 @@ import '../cubit/lost_reports_state.dart';
 import '../widgets/lost_report_card.dart';
 import '../../../../shared/widgets/app_section_scaffold.dart';
 
+
 /// Екран активних SOS-оголошень.
 class LostReportsScreen extends StatefulWidget {
   const LostReportsScreen({super.key});

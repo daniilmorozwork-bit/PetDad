@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../cubit/sightings_cubit.dart';
 import '../cubit/sightings_state.dart';
+import '../../../current_location/data/models/current_location_model.dart';
+import '../../../current_location/presentation/cubit/current_location_cubit.dart';
+import '../../../current_location/presentation/cubit/current_location_state.dart';
+
 
 /// Екран створення свідчення до активного SOS.
 class CreateSightingScreen extends StatefulWidget {
@@ -21,21 +25,30 @@ class CreateSightingScreen extends StatefulWidget {
 class _CreateSightingScreenState extends State<CreateSightingScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final _latitudeController = TextEditingController(text: '50.451');
-  final _longitudeController = TextEditingController(text: '30.525');
-  final _accuracyController = TextEditingController(text: '20');
+  final _latitudeController = TextEditingController();
+  final _longitudeController = TextEditingController();
+  final _accuracyController = TextEditingController();
   final _seenAtController = TextEditingController();
   final _descriptionController = TextEditingController();
 
   String _confidenceLevel = 'medium';
   bool _showValidationErrors = false;
 
-  @override
-  void initState() {
-    super.initState();
+ @override
+void initState() {
+  super.initState();
 
-    _seenAtController.text = DateTime.now().toUtc().toIso8601String();
-  }
+  /// Віднімаємо хвилину, щоб час не потрапив у майбутнє
+  /// через невелику різницю часу між клієнтом і сервером.
+  _seenAtController.text = DateTime.now()
+      .subtract(const Duration(minutes: 1))
+      .toUtc()
+      .toIso8601String();
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _fillCurrentCoordinates();
+  });
+}
 
   @override
   void dispose() {
@@ -45,6 +58,35 @@ class _CreateSightingScreenState extends State<CreateSightingScreen> {
     _seenAtController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+    
+    /// Записує поточну позицію у поля свідчення.
+  void _setCoordinates(CurrentLocationModel location) {
+    _latitudeController.text = location.latitude.toStringAsFixed(6);
+    _longitudeController.text = location.longitude.toStringAsFixed(6);
+    _accuracyController.text = location.accuracyMeters.toString();
+  }
+
+  /// Автоматично підставляє поточну позицію.
+  /// Поля можна змінити, якщо свідчення стосується іншої точки.
+  Future<void> _fillCurrentCoordinates({
+    bool forceRefresh = false,
+  }) async {
+    final locationCubit = context.read<CurrentLocationCubit>();
+
+    final cachedLocation =
+        forceRefresh ? null : locationCubit.state.location;
+
+    final location =
+        cachedLocation ?? await locationCubit.loadCurrentLocation();
+
+    if (!mounted || location == null) {
+      return;
+    }
+
+    setState(() {
+      _setCoordinates(location);
+    });
   }
 
   String? _validateCoordinate({
@@ -103,6 +145,7 @@ class _CreateSightingScreenState extends State<CreateSightingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final locationState = context.watch<CurrentLocationCubit>().state;
     return BlocConsumer<SightingsCubit, SightingsState>(
       listener: (context, state) {
         if (state.successMessage != null) {
@@ -153,15 +196,61 @@ class _CreateSightingScreenState extends State<CreateSightingScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Для поточної версії координати вводяться вручну. Пізніше це буде вибір точки на карті.',
+                   const Text(
+                      'Координати автоматично заповнюються вашою поточною позицією. '
+                      'За потреби можна вказати інше місце вручну.',
+                    ),
+                    const SizedBox(height: 16),
+
+                    Card(
+                      color: locationState.status == CurrentLocationStatus.error
+                          ? Colors.orange.shade50
+                          : Colors.blue.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  locationState.status == CurrentLocationStatus.error
+                                      ? Icons.location_off_outlined
+                                      : Icons.my_location,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    locationState.isLoading
+                                        ? 'Визначення поточної позиції...'
+                                        : locationState.location != null
+                                            ? 'Поточну позицію підставлено у форму.'
+                                            : locationState.errorMessage ??
+                                                'Натисніть кнопку, щоб визначити позицію.',
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            OutlinedButton.icon(
+                              onPressed: locationState.isLoading
+                                  ? null
+                                  : () {
+                                      _fillCurrentCoordinates(forceRefresh: true);
+                                    },
+                              icon: const Icon(Icons.my_location),
+                              label: const Text('Оновити мою позицію'),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 20),
                     TextFormField(
                       controller: _latitudeController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                        labelText: 'Широта',
+                        labelText: 'Широта місця спостереження',
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) => _validateCoordinate(
@@ -176,7 +265,7 @@ class _CreateSightingScreenState extends State<CreateSightingScreen> {
                       controller: _longitudeController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                        labelText: 'Довгота',
+                        labelText: 'Довгота місця спостереження',
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) => _validateCoordinate(
@@ -191,7 +280,7 @@ class _CreateSightingScreenState extends State<CreateSightingScreen> {
                       controller: _accuracyController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                        labelText: 'Точність, м',
+                        labelText: 'Точність координат, м',
                         hintText: 'Необовʼязково',
                         border: OutlineInputBorder(),
                       ),

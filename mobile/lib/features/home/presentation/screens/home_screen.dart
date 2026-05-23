@@ -12,6 +12,9 @@ import '../../../map_events/presentation/cubit/map_events_cubit.dart';
 import '../../../map_events/presentation/cubit/map_events_state.dart';
 import '../../../notifications/presentation/cubit/notifications_cubit.dart';
 import '../../../notifications/presentation/cubit/notifications_state.dart';
+import '../../../current_location/data/models/current_location_model.dart';
+import '../../../current_location/presentation/cubit/current_location_cubit.dart';
+import '../../../current_location/presentation/cubit/current_location_state.dart';
 
 /// Головний екран застосунку.
 /// Показує компактну карту, швидкі дії та останні активні події.
@@ -23,10 +26,14 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const double _defaultLatitude = 50.4501;
-  static const double _defaultLongitude = 30.5234;
-  static const int _defaultRadiusMeters = 5000;
+  /// Резервна позиція, якщо користувач не надав доступ до геолокації.
+static const LatLng _fallbackCenter = LatLng(50.4501, 30.5234);
+static const int _defaultRadiusMeters = 5000;
 
+final MapController _mapController = MapController();
+
+LatLng _mapCenter = _fallbackCenter;
+bool _usingDeviceLocation = false;
   @override
   void initState() {
     super.initState();
@@ -36,16 +43,36 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _refreshHomeData() async {
-    await Future.wait([
-      context.read<MapEventsCubit>().loadNearbyEvents(
-            latitude: _defaultLatitude,
-            longitude: _defaultLongitude,
-            radiusMeters: _defaultRadiusMeters,
-          ),
-      context.read<NotificationsCubit>().loadNotifications(),
-    ]);
+  /// Оновлює головний екран:
+/// отримує поточну позицію, рухає карту та завантажує події поруч.
+Future<void> _refreshHomeData() async {
+  final location =
+      await context.read<CurrentLocationCubit>().loadCurrentLocation();
+
+  if (!mounted) {
+    return;
   }
+
+  final center = location == null
+      ? _fallbackCenter
+      : LatLng(location.latitude, location.longitude);
+
+  setState(() {
+    _mapCenter = center;
+    _usingDeviceLocation = location != null;
+  });
+
+  _mapController.move(center, 13);
+
+  await Future.wait([
+    context.read<MapEventsCubit>().loadNearbyEvents(
+          latitude: center.latitude,
+          longitude: center.longitude,
+          radiusMeters: _defaultRadiusMeters,
+        ),
+    context.read<NotificationsCubit>().loadNotifications(),
+  ]);
+}
 
   void _openEvent(MapEventModel event) {
     if (event.isLostPetEvent && event.sourceEntityId != null) {
@@ -106,10 +133,42 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Створює маркер поточної позиції користувача.
+Marker _buildCurrentLocationMarker(CurrentLocationModel location) {
+  return Marker(
+    point: LatLng(
+      location.latitude,
+      location.longitude,
+    ),
+    width: 44,
+    height: 44,
+    child: Tooltip(
+      message: 'Ваше місцезнаходження',
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.18),
+              blurRadius: 6,
+            ),
+          ],
+        ),
+        child: Icon(
+          Icons.my_location,
+          color: Colors.blue.shade700,
+          size: 27,
+        ),
+      ),
+    ),
+  );
+}
+
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthCubit>().state;
-
+    final locationState = context.watch<CurrentLocationCubit>().state;
     String userName = 'Користувач';
 
     if (authState is AuthAuthenticated) {
@@ -168,9 +227,66 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 20),
 
+              if (locationState.status == CurrentLocationStatus.error) ...[
+                Card(
+                  color: Colors.orange.shade50,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.location_off_outlined,
+                          color: Colors.orange.shade800,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            '${locationState.errorMessage ?? 'Геолокація недоступна.'} '
+                            'Показується тестова область.',
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _refreshHomeData,
+                          child: const Text('Повторити'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ] else if (_usingDeviceLocation && locationState.location != null) ...[
+                Card(
+                  color: Colors.blue.shade50,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.my_location,
+                          color: Colors.blue.shade800,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Показуються події поруч із вашою позицією: '
+                            '${locationState.location!.latitude.toStringAsFixed(5)}, '
+                            '${locationState.location!.longitude.toStringAsFixed(5)}.',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
               BlocBuilder<MapEventsCubit, MapEventsState>(
                 builder: (context, state) {
-                  final markers = state.events.map(_buildMarker).toList();
+                  final markers = <Marker>[
+                    ...state.events.map(_buildMarker),
+                    if (locationState.location != null)
+                      _buildCurrentLocationMarker(locationState.location!),
+                  ];
 
                   return Card(
                     clipBehavior: Clip.antiAlias,
@@ -204,11 +320,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Stack(
                             children: [
                               FlutterMap(
+                                mapController: _mapController,
                                 options: MapOptions(
-                                  initialCenter: const LatLng(
-                                    _defaultLatitude,
-                                    _defaultLongitude,
-                                  ),
+                                  initialCenter: _mapCenter,
                                   initialZoom: 13,
                                 ),
                                 children: [
@@ -242,7 +356,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                               ),
-                              if (state.isLoading)
+                              if (state.isLoading || locationState.isLoading)
                                 Positioned.fill(
                                   child: Container(
                                     color: Colors.black.withOpacity(0.06),
