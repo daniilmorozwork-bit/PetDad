@@ -19,6 +19,7 @@ import '../../features/qr/presentation/screens/public_qr_profile_screen.dart';
 import '../../features/lost_reports/presentation/screens/create_lost_report_screen.dart';
 import '../../features/lost_reports/presentation/screens/lost_report_details_screen.dart';
 import '../../features/lost_reports/presentation/screens/lost_reports_screen.dart';
+import '../../features/map_events/presentation/screens/map_screen.dart';
 
 /// Створення маршрутизатора застосунку.
 GoRouter createAppRouter(AuthCubit authCubit) {
@@ -121,6 +122,10 @@ GoRouter createAppRouter(AuthCubit authCubit) {
 
           return PublicQrProfileScreen(token: token);
         },
+      ),
+      GoRoute(
+        path: '/map',
+        builder: (context, state) => const MapScreen(),
       ),
     ],
   );

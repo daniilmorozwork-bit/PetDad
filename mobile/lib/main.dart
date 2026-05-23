@@ -13,6 +13,8 @@ import 'features/qr/data/repositories/qr_repository.dart';
 import 'features/qr/presentation/cubit/qr_cubit.dart';
 import 'features/lost_reports/data/repositories/lost_reports_repository.dart';
 import 'features/lost_reports/presentation/cubit/lost_reports_cubit.dart';
+import 'features/map_events/data/repositories/map_events_repository.dart';
+import 'features/map_events/presentation/cubit/map_events_cubit.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,11 +30,13 @@ void main() {
   final petsRepository = PetsRepository(apiClient: apiClient);
   final qrRepository = QrRepository(apiClient: apiClient);
   final lostReportsRepository = LostReportsRepository(apiClient: apiClient);
+  final mapEventsRepository = MapEventsRepository(apiClient: apiClient);
 
   final authCubit = AuthCubit(authRepository);
   final petsCubit = PetsCubit(petsRepository);
   final qrCubit = QrCubit(qrRepository);
   final lostReportsCubit = LostReportsCubit(lostReportsRepository);
+  final mapEventsCubit = MapEventsCubit(mapEventsRepository);
   
 
  
@@ -44,6 +48,7 @@ void main() {
       petsCubit: petsCubit,
       qrCubit: qrCubit,
       lostReportsCubit: lostReportsCubit,
+      mapEventsCubit: mapEventsCubit,
       appRouter: appRouter,
     ),
   );
@@ -55,6 +60,7 @@ class PetDadApp extends StatelessWidget {
   final PetsCubit petsCubit;
   final QrCubit qrCubit;
   final LostReportsCubit lostReportsCubit;
+  final MapEventsCubit mapEventsCubit;
   final RouterConfig<Object> appRouter;
 
   const PetDadApp({
@@ -63,6 +69,7 @@ class PetDadApp extends StatelessWidget {
     required this.petsCubit,
     required this.qrCubit,
     required this.lostReportsCubit,
+    required this.mapEventsCubit,
     required this.appRouter,
   });
 
@@ -74,6 +81,7 @@ class PetDadApp extends StatelessWidget {
         BlocProvider<PetsCubit>.value(value: petsCubit),
         BlocProvider<QrCubit>.value(value: qrCubit),
         BlocProvider<LostReportsCubit>.value(value: lostReportsCubit),
+        BlocProvider<MapEventsCubit>.value(value: mapEventsCubit),
       ],
       child: MaterialApp.router(
         title: 'PetDad',

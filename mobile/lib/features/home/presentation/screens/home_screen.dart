@@ -82,7 +82,15 @@ class HomeScreen extends StatelessWidget {
                   },
                   icon: const Icon(Icons.campaign_outlined),
                   label: const Text('SOS-пошук'),
-            ),
+              ),
+              const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: () {
+                    context.push('/map');
+                  },
+                  icon: const Icon(Icons.map_outlined),
+                  label: const Text('Карта подій'),
+              ),
           ],
         ),
       ),
