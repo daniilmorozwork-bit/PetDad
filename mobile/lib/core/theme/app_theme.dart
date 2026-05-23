@@ -1,21 +1,34 @@
 import 'package:flutter/material.dart';
 
-/// Базова тема застосунку.
+/// Теми інтерфейсу застосунку.
 class AppTheme {
+  static const _seedColor = Color(0xFF3A8D68);
+
+  /// Світла тема.
   static ThemeData light() {
-    const primaryColor = Color(0xFF3A8D68);
-    const backgroundColor = Color(0xFFFAFAF7);
+    return _buildTheme(Brightness.light);
+  }
+
+  /// Темна тема.
+  static ThemeData dark() {
+    return _buildTheme(Brightness.dark);
+  }
+
+  static ThemeData _buildTheme(Brightness brightness) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: _seedColor,
+      brightness: brightness,
+    );
 
     return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryColor,
-        surface: backgroundColor,
-      ),
-      scaffoldBackgroundColor: backgroundColor,
-      appBarTheme: const AppBarTheme(
+      brightness: brightness,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: colorScheme.surface,
+      appBarTheme: AppBarTheme(
         centerTitle: false,
-        backgroundColor: backgroundColor,
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(
@@ -24,6 +37,14 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(48),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),

@@ -7,6 +7,7 @@ import '../cubit/sightings_state.dart';
 import '../../../current_location/data/models/current_location_model.dart';
 import '../../../current_location/presentation/cubit/current_location_cubit.dart';
 import '../../../current_location/presentation/cubit/current_location_state.dart';
+import '../../../settings/presentation/cubit/settings_cubit.dart';
 
 
 /// Екран створення свідчення до активного SOS.
@@ -38,16 +39,18 @@ class _CreateSightingScreenState extends State<CreateSightingScreen> {
 void initState() {
   super.initState();
 
-  /// Віднімаємо хвилину, щоб час не потрапив у майбутнє
-  /// через невелику різницю часу між клієнтом і сервером.
+  final settings = context.read<SettingsCubit>().state;
+
   _seenAtController.text = DateTime.now()
       .subtract(const Duration(minutes: 1))
       .toUtc()
       .toIso8601String();
 
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    _fillCurrentCoordinates();
-  });
+  if (settings.useCurrentLocation) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fillCurrentCoordinates();
+    });
+  }
 }
 
   @override
@@ -146,6 +149,7 @@ void initState() {
   @override
   Widget build(BuildContext context) {
     final locationState = context.watch<CurrentLocationCubit>().state;
+    final settings = context.watch<SettingsCubit>().state;
     return BlocConsumer<SightingsCubit, SightingsState>(
       listener: (context, state) {
         if (state.successMessage != null) {
@@ -196,9 +200,10 @@ void initState() {
                       ),
                     ),
                     const SizedBox(height: 8),
-                   const Text(
-                      'Координати автоматично заповнюються вашою поточною позицією. '
-                      'За потреби можна вказати інше місце вручну.',
+                   Text(
+                      settings.useCurrentLocation
+                          ? 'Координати автоматично заповнюються вашою поточною позицією. За потреби можна вказати інше місце вручну.'
+                          : 'Автоматичне визначення позиції вимкнено. Координати можна ввести вручну або отримати кнопкою нижче.',
                     ),
                     const SizedBox(height: 16),
 

@@ -12,6 +12,7 @@ import '../../data/models/map_event_model.dart';
 import '../cubit/map_events_cubit.dart';
 import '../cubit/map_events_state.dart';
 import '../widgets/map_event_card.dart';
+import '../../../settings/presentation/cubit/settings_cubit.dart';
 
 /// Екран карти з активними подіями.
 /// Використовує реальне місцезнаходження користувача.
@@ -43,48 +44,66 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  /// Отримує поточну позицію та завантажує події поблизу неї.
-  Future<void> _locateAndLoadEvents() async {
-    final location =
-        await context.read<CurrentLocationCubit>().loadCurrentLocation();
+  /// Отримує позицію користувача, якщо геолокація дозволена в налаштуваннях.
+Future<void> _locateAndLoadEvents() async {
+  final settings = context.read<SettingsCubit>().state;
+  final locationCubit = context.read<CurrentLocationCubit>();
 
-    if (!mounted) {
-      return;
-    }
+  if (!settings.useCurrentLocation) {
+    locationCubit.clearLocation();
 
-    if (location != null) {
-      final center = LatLng(
-        location.latitude,
-        location.longitude,
-      );
+    setState(() {
+      _searchCenter = _fallbackCenter;
+      _usingDeviceLocation = false;
+    });
 
-      setState(() {
-        _searchCenter = center;
-        _usingDeviceLocation = true;
-      });
-
-      _mapController.move(center, 13);
-    } else {
-      setState(() {
-        _searchCenter = _fallbackCenter;
-        _usingDeviceLocation = false;
-      });
-
-      _mapController.move(_fallbackCenter, 13);
-    }
+    _mapController.move(_fallbackCenter, 13);
 
     await _loadNearbyEvents();
+    return;
   }
 
-  /// Завантажує події навколо поточного центру пошуку.
-  Future<void> _loadNearbyEvents() async {
-    await context.read<MapEventsCubit>().loadNearbyEvents(
-          latitude: _searchCenter.latitude,
-          longitude: _searchCenter.longitude,
-          radiusMeters: _defaultRadiusMeters,
-          type: _selectedType,
-        );
+  final location = await locationCubit.loadCurrentLocation();
+
+  if (!mounted) {
+    return;
   }
+
+  if (location != null) {
+    final center = LatLng(
+      location.latitude,
+      location.longitude,
+    );
+
+    setState(() {
+      _searchCenter = center;
+      _usingDeviceLocation = true;
+    });
+
+    _mapController.move(center, 13);
+  } else {
+    setState(() {
+      _searchCenter = _fallbackCenter;
+      _usingDeviceLocation = false;
+    });
+
+    _mapController.move(_fallbackCenter, 13);
+  }
+
+  await _loadNearbyEvents();
+}
+
+  /// Завантажує події у вибраному користувачем радіусі.
+Future<void> _loadNearbyEvents() async {
+  final settings = context.read<SettingsCubit>().state;
+
+  await context.read<MapEventsCubit>().loadNearbyEvents(
+        latitude: _searchCenter.latitude,
+        longitude: _searchCenter.longitude,
+        radiusMeters: settings.defaultSearchRadiusMeters,
+        type: _selectedType,
+      );
+}
 
   /// Відкриває повʼязану сутність події.
   void _openEvent(MapEventModel event) {
@@ -233,6 +252,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     final locationState = context.watch<CurrentLocationCubit>().state;
+    final settings = context.watch<SettingsCubit>().state;
 
     return BlocConsumer<MapEventsCubit, MapEventsState>(
       listener: (context, state) {
@@ -258,11 +278,13 @@ class _MapScreenState extends State<MapScreen> {
           currentRoute: '/map',
           actions: [
             IconButton(
-              onPressed: locationState.isLoading
+              onPressed: !settings.useCurrentLocation || locationState.isLoading
                   ? null
                   : _locateAndLoadEvents,
               icon: const Icon(Icons.my_location),
-              tooltip: 'Моє місцезнаходження',
+              tooltip: settings.useCurrentLocation
+                  ? 'Моє місцезнаходження'
+                  : 'Геолокація вимкнена у налаштуваннях',
             ),
             IconButton(
               onPressed: state.isLoading ? null : _loadNearbyEvents,
@@ -272,7 +294,15 @@ class _MapScreenState extends State<MapScreen> {
           ],
           body: Column(
             children: [
-              if (locationState.status == CurrentLocationStatus.error)
+              if (!settings.useCurrentLocation)
+                _LocationNotice(
+                  message:
+                      'Геолокацію вимкнено у налаштуваннях. '
+                      'Показується тестова область.',
+                  onRetry: () {},
+                  isError: false,
+                )
+              else if (locationState.status == CurrentLocationStatus.error)
                 _LocationNotice(
                   message:
                       '${locationState.errorMessage ?? 'Геолокація недоступна.'} '
@@ -415,7 +445,7 @@ class _MapScreenState extends State<MapScreen> {
 /// Повідомлення про стан геолокації.
 class _LocationNotice extends StatelessWidget {
   final String message;
-  final VoidCallback onRetry;
+  final VoidCallback? onRetry;
   final bool isError;
 
   const _LocationNotice({
@@ -446,10 +476,11 @@ class _LocationNotice extends StatelessWidget {
           Expanded(
             child: Text(message),
           ),
-          TextButton(
-            onPressed: onRetry,
-            child: const Text('Оновити'),
-          ),
+          if (onRetry != null)
+            TextButton(
+              onPressed: onRetry,
+              child: const Text('Оновити'),
+            ),
         ],
       ),
     );

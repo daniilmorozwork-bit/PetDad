@@ -21,8 +21,11 @@ import 'features/notifications/data/repositories/notifications_repository.dart';
 import 'features/notifications/presentation/cubit/notifications_cubit.dart';
 import 'features/current_location/data/repositories/current_location_repository.dart';
 import 'features/current_location/presentation/cubit/current_location_cubit.dart';
+import 'features/settings/data/models/app_settings_model.dart';
+import 'features/settings/data/repositories/settings_repository.dart';
+import 'features/settings/presentation/cubit/settings_cubit.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final tokenStorage = TokenStorage();
@@ -40,6 +43,7 @@ void main() {
   final sightingsRepository = SightingsRepository(apiClient: apiClient);
   final notificationsRepository = NotificationsRepository(apiClient: apiClient);
   final currentLocationRepository = CurrentLocationRepository(apiClient: apiClient);
+  final settingsRepository = SettingsRepository();
 
   final authCubit = AuthCubit(authRepository);
   final petsCubit = PetsCubit(petsRepository);
@@ -49,6 +53,9 @@ void main() {
   final sightingsCubit = SightingsCubit(sightingsRepository);
   final notificationsCubit = NotificationsCubit(notificationsRepository);
   final currentLocationCubit = CurrentLocationCubit(currentLocationRepository);
+  final settingsCubit = SettingsCubit(settingsRepository);
+
+  await settingsCubit.loadSettings();
 
  
   final appRouter = createAppRouter(authCubit);
@@ -63,6 +70,7 @@ void main() {
       sightingsCubit: sightingsCubit,
       notificationsCubit: notificationsCubit,
       currentLocationCubit: currentLocationCubit,
+      settingsCubit: settingsCubit,
       appRouter: appRouter,
     ),
   );
@@ -78,6 +86,7 @@ class PetDadApp extends StatelessWidget {
   final SightingsCubit sightingsCubit;
   final NotificationsCubit notificationsCubit;
   final CurrentLocationCubit currentLocationCubit;
+  final SettingsCubit settingsCubit;
   final RouterConfig<Object> appRouter;
 
   const PetDadApp({
@@ -90,6 +99,7 @@ class PetDadApp extends StatelessWidget {
     required this.sightingsCubit,
     required this.notificationsCubit,
     required this.currentLocationCubit,
+    required this.settingsCubit,
     required this.appRouter,
   });
 
@@ -105,12 +115,19 @@ class PetDadApp extends StatelessWidget {
         BlocProvider<SightingsCubit>.value(value: sightingsCubit),
         BlocProvider<NotificationsCubit>.value(value: notificationsCubit),
         BlocProvider<CurrentLocationCubit>.value(value: currentLocationCubit,),
+        BlocProvider<SettingsCubit>.value(value: settingsCubit,),
       ],
-      child: MaterialApp.router(
-        title: 'PetDad',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(),
-        routerConfig: appRouter,
+      child: BlocBuilder<SettingsCubit, AppSettingsModel>(
+        builder: (context, settings) {
+          return MaterialApp.router(
+            title: 'PetDad',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: settings.themeMode,
+            routerConfig: appRouter,
+          );
+        },
       ),
     );
   }

@@ -58,4 +58,11 @@ class CurrentLocationCubit extends Cubit<CurrentLocationState> {
       return null;
     }
   }
+
+  /// Очищає збережену в стані позицію.
+  /// Використовується після вимкнення геолокації в налаштуваннях.
+  void clearLocation() {
+    emit(CurrentLocationState.initial());
+  }
+
 }

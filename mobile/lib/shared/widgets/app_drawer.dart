@@ -136,6 +136,13 @@ class AppDrawer extends StatelessWidget {
                       );
                     },
                   ),
+                  _DrawerTile(
+                    icon: Icons.settings_outlined,
+                    selectedIcon: Icons.settings,
+                    title: 'Налаштування',
+                    isSelected: currentRoute == '/settings',
+                    onTap: () => _openSection(context, '/settings'),
+                  ),
                 ],
               ),
             ),

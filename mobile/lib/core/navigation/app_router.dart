@@ -24,6 +24,7 @@ import '../../features/sightings/presentation/screens/create_sighting_screen.dar
 import '../../features/sightings/presentation/screens/sighting_details_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import '../../features/pets/presentation/screens/edit_pet_screen.dart';
+import '../../features/settings/presentation/screens/settings_screen.dart';
 
 /// Створення маршрутизатора застосунку.
 GoRouter createAppRouter(AuthCubit authCubit) {
@@ -163,6 +164,10 @@ GoRouter createAppRouter(AuthCubit authCubit) {
       GoRoute(
         path: '/notifications',
         builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
       ),
     ],
   );

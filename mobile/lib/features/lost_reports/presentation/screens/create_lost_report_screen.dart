@@ -7,6 +7,8 @@ import '../cubit/lost_reports_state.dart';
 import '../../../current_location/data/models/current_location_model.dart';
 import '../../../current_location/presentation/cubit/current_location_cubit.dart';
 import '../../../current_location/presentation/cubit/current_location_state.dart';
+import '../../../settings/presentation/cubit/settings_cubit.dart';
+
 /// Екран створення SOS для конкретної тварини.
 class CreateLostReportScreen extends StatefulWidget {
   final String petId;
@@ -30,7 +32,7 @@ class _CreateLostReportScreenState extends State<CreateLostReportScreen> {
   final _descriptionController = TextEditingController();
   final _contactPhoneController = TextEditingController();
   final _rewardController = TextEditingController();
-  final _radiusController = TextEditingController(text: '3000');
+  final _radiusController = TextEditingController();
 
   bool _showValidationErrors = false;
 
@@ -38,12 +40,18 @@ class _CreateLostReportScreenState extends State<CreateLostReportScreen> {
 void initState() {
   super.initState();
 
+  final settings = context.read<SettingsCubit>().state;
+
   final now = DateTime.now().subtract(const Duration(minutes: 5)).toUtc();
   _lastSeenAtController.text = now.toIso8601String();
+  _radiusController.text =
+      settings.defaultSearchRadiusMeters.toString();
 
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    _fillCurrentCoordinates();
-  });
+  if (settings.useCurrentLocation) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fillCurrentCoordinates();
+    });
+  }
 }
 
   @override
@@ -158,6 +166,8 @@ void initState() {
   @override
   Widget build(BuildContext context) {
     final locationState = context.watch<CurrentLocationCubit>().state;
+    final settings = context.watch<SettingsCubit>().state;
+
     return BlocConsumer<LostReportsCubit, LostReportsState>(
       listener: (context, state) {
         if (state.successMessage != null) {
@@ -208,9 +218,10 @@ void initState() {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Координати місця зникнення автоматично заповнюються вашою поточною позицією. '
-                      'За потреби їх можна змінити вручну.',
+                   Text(
+                      settings.useCurrentLocation
+                          ? 'Координати місця зникнення автоматично заповнюються вашою поточною позицією. За потреби їх можна змінити вручну.'
+                          : 'Автоматичне визначення позиції вимкнено. Координати можна ввести вручну або отримати натисканням кнопки нижче.',
                     ),
                     const SizedBox(height: 16),
 

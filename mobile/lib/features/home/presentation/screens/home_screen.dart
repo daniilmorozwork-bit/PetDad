@@ -15,6 +15,7 @@ import '../../../notifications/presentation/cubit/notifications_state.dart';
 import '../../../current_location/data/models/current_location_model.dart';
 import '../../../current_location/presentation/cubit/current_location_cubit.dart';
 import '../../../current_location/presentation/cubit/current_location_state.dart';
+import '../../../settings/presentation/cubit/settings_cubit.dart';
 
 /// Головний екран застосунку.
 /// Показує компактну карту, швидкі дії та останні активні події.
@@ -43,11 +44,18 @@ bool _usingDeviceLocation = false;
     });
   }
 
-  /// Оновлює головний екран:
-/// отримує поточну позицію, рухає карту та завантажує події поруч.
+  /// Оновлює головний екран відповідно до налаштувань користувача.
 Future<void> _refreshHomeData() async {
-  final location =
-      await context.read<CurrentLocationCubit>().loadCurrentLocation();
+  final settings = context.read<SettingsCubit>().state;
+  final locationCubit = context.read<CurrentLocationCubit>();
+
+  CurrentLocationModel? location;
+
+  if (settings.useCurrentLocation) {
+    location = await locationCubit.loadCurrentLocation();
+  } else {
+    locationCubit.clearLocation();
+  }
 
   if (!mounted) {
     return;
@@ -68,7 +76,7 @@ Future<void> _refreshHomeData() async {
     context.read<MapEventsCubit>().loadNearbyEvents(
           latitude: center.latitude,
           longitude: center.longitude,
-          radiusMeters: _defaultRadiusMeters,
+          radiusMeters: settings.defaultSearchRadiusMeters,
         ),
     context.read<NotificationsCubit>().loadNotifications(),
   ]);
@@ -169,6 +177,7 @@ Marker _buildCurrentLocationMarker(CurrentLocationModel location) {
   Widget build(BuildContext context) {
     final authState = context.watch<AuthCubit>().state;
     final locationState = context.watch<CurrentLocationCubit>().state;
+    final settings = context.watch<SettingsCubit>().state;
     String userName = 'Користувач';
 
     if (authState is AuthAuthenticated) {
@@ -226,6 +235,27 @@ Marker _buildCurrentLocationMarker(CurrentLocationModel location) {
                 'Переглядайте події поруч та керуйте профілями тварин.',
               ),
               const SizedBox(height: 20),
+
+              if (!settings.useCurrentLocation) ...[
+                Card(
+                  color: Colors.grey.shade100,
+                  child: const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        Icon(Icons.location_disabled_outlined),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Використання геолокації вимкнено. Показується тестова область.',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ] else 
 
               if (locationState.status == CurrentLocationStatus.error) ...[
                 Card(
