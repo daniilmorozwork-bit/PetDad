@@ -91,6 +91,14 @@ class HomeScreen extends StatelessWidget {
                   icon: const Icon(Icons.map_outlined),
                   label: const Text('Карта подій'),
               ),
+              const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    context.push('/notifications');
+                  },
+                  icon: const Icon(Icons.notifications_outlined),
+                  label: const Text('Повідомлення'),
+                ),
           ],
         ),
       ),

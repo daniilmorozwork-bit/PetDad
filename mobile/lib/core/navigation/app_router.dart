@@ -22,6 +22,7 @@ import '../../features/lost_reports/presentation/screens/lost_reports_screen.dar
 import '../../features/map_events/presentation/screens/map_screen.dart';
 import '../../features/sightings/presentation/screens/create_sighting_screen.dart';
 import '../../features/sightings/presentation/screens/sighting_details_screen.dart';
+import '../../features/notifications/presentation/screens/notifications_screen.dart';
 
 /// Створення маршрутизатора застосунку.
 GoRouter createAppRouter(AuthCubit authCubit) {
@@ -30,11 +31,16 @@ GoRouter createAppRouter(AuthCubit authCubit) {
     refreshListenable: GoRouterRefreshStream(authCubit.stream),
     redirect: (context, state) {
   final authState = authCubit.state;
-
   final location = state.matchedLocation;
 
   final isAuthRoute = location == '/login' || location == '/register';
   final isSplash = location == '/splash';
+  final isPublicQrRoute = location.startsWith('/qr-public/');
+
+  /// Публічний профіль за QR доступний без авторизації.
+  if (isPublicQrRoute) {
+    return null;
+  }
 
   if (authState is AuthLoading || authState is AuthInitial) {
     return isSplash ? null : '/splash';
@@ -144,6 +150,10 @@ GoRouter createAppRouter(AuthCubit authCubit) {
 
           return SightingDetailsScreen(sightingId: sightingId);
         },
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsScreen(),
       ),
     ],
   );
