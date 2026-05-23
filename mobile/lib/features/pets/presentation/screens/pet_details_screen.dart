@@ -7,6 +7,7 @@ import '../../data/models/pet_model.dart';
 import '../cubit/pets_cubit.dart';
 import '../cubit/pets_state.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/utils/app_formatters.dart';
 
 /// Екран деталей тварини.
 class PetDetailsScreen extends StatefulWidget {
@@ -329,7 +330,7 @@ class _PetDetailsScreenState extends State<PetDetailsScreen> {
                       ),
                       _InfoRow(
                         label: 'Дата народження',
-                        value: pet.birthDate ?? 'Не вказано',
+                        value: AppFormatters.dateFromIso(pet.birthDate),
                       ),
                       _InfoRow(
                         label: 'Номер чіпа',

@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../cubit/sightings_cubit.dart';
 import '../cubit/sightings_state.dart';
+import '../../../../core/utils/app_formatters.dart';
+import '../../../../shared/widgets/location_preview_card.dart';
 
 /// Екран деталей одного свідчення.
 class SightingDetailsScreen extends StatefulWidget {
@@ -37,6 +39,19 @@ class _SightingDetailsScreenState extends State<SightingDetailsScreen> {
         return 'Низька';
       default:
         return confidence;
+    }
+  }
+
+    String _statusLabel(String status) {
+    switch (status) {
+      case 'active':
+        return 'Активне';
+      case 'confirmed':
+        return 'Підтверджене';
+      case 'rejected':
+        return 'Відхилене';
+      default:
+        return status;
     }
   }
 
@@ -116,16 +131,30 @@ class _SightingDetailsScreenState extends State<SightingDetailsScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _InfoRow(label: 'Опис', value: sighting.description),
-                  _InfoRow(label: 'Час', value: sighting.seenAt),
+                 _InfoRow(
+                    label: 'Опис',
+                    value: sighting.description,
+                  ),
                   _InfoRow(
-                    label: 'Координати',
-                    value:
-                        '${sighting.location.latitude}, ${sighting.location.longitude}',
+                    label: 'Час',
+                    value: AppFormatters.dateTimeFromIso(sighting.seenAt),
                   ),
                   _InfoRow(
                     label: 'Статус',
-                    value: sighting.status,
+                    value: _statusLabel(sighting.status),
+                  ),  
+
+                  const SizedBox(height: 12),
+
+                  LocationPreviewCard(
+                    title: 'Місце спостереження',
+                    description: sighting.location.address ??
+                        sighting.location.city ??
+                        'Місце позначено на карті',
+                    latitude: sighting.location.latitude,
+                    longitude: sighting.location.longitude,
+                    markerIcon: Icons.visibility,
+                    markerColor: Colors.orange,
                   ),
                 ],
               );

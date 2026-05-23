@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/models/notification_model.dart';
+import '../../../../core/utils/app_formatters.dart';
 
 /// Картка повідомлення у списку.
 class NotificationCard extends StatelessWidget {
@@ -45,21 +46,7 @@ class NotificationCard extends StatelessWidget {
     }
   }
 
-  String _formatDate(String value) {
-    final date = DateTime.tryParse(value)?.toLocal();
-
-    if (date == null) {
-      return value;
-    }
-
-    String twoDigits(int number) {
-      return number.toString().padLeft(2, '0');
-    }
-
-    return '${twoDigits(date.day)}.${twoDigits(date.month)}.${date.year} '
-        '${twoDigits(date.hour)}:${twoDigits(date.minute)}';
-  }
-
+  
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -126,7 +113,7 @@ class NotificationCard extends StatelessWidget {
                           visualDensity: VisualDensity.compact,
                         ),
                         Text(
-                          _formatDate(notification.createdAt),
+                          AppFormatters.dateTimeFromIso(notification.createdAt),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],

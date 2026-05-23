@@ -13,6 +13,7 @@ import '../cubit/map_events_cubit.dart';
 import '../cubit/map_events_state.dart';
 import '../widgets/map_event_card.dart';
 import '../../../settings/presentation/cubit/settings_cubit.dart';
+import '../../../../core/utils/app_formatters.dart';
 
 /// Екран карти з активними подіями.
 /// Використовує реальне місцезнаходження користувача.
@@ -216,13 +217,13 @@ Future<void> _loadNearbyEvents() async {
               Text(event.description ?? 'Опис відсутній'),
               const SizedBox(height: 12),
               Text(
-                'Координати: '
-                '${event.location.latitude}, ${event.location.longitude}',
+                'Додано: ${AppFormatters.dateTimeFromIso(event.createdAt)}',
               ),
               if (event.distanceMeters != null) ...[
                 const SizedBox(height: 6),
                 Text(
-                  'Відстань: ${event.distanceMeters!.round()} м',
+                  'Відстань від вас: '
+                  '${AppFormatters.distance(event.distanceMeters!)}',
                 ),
               ],
               const SizedBox(height: 16),
@@ -314,10 +315,10 @@ Future<void> _loadNearbyEvents() async {
                   locationState.location != null)
                 _LocationNotice(
                   message:
-                      'Ваше місцезнаходження: '
-                      '${locationState.location!.latitude.toStringAsFixed(5)}, '
-                      '${locationState.location!.longitude.toStringAsFixed(5)} '
-                      '± ${locationState.location!.accuracyMeters} м',
+                  'Вашу позицію визначено з точністю '
+                  '± ${locationState.location!.accuracyMeters} м. '
+                  'Показуються події в радіусі '
+                  '${AppFormatters.distance(settings.defaultSearchRadiusMeters)}.',
                   onRetry: _locateAndLoadEvents,
                   isError: false,
                 ),

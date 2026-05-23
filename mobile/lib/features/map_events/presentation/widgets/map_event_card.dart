@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/models/map_event_model.dart';
+import '../../../../core/utils/app_formatters.dart';
 
 /// Картка події карти у списку під картою.
 class MapEventCard extends StatelessWidget {
@@ -42,8 +43,8 @@ class MapEventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final distance = event.distanceMeters == null
-        ? null
-        : '${event.distanceMeters!.round()} м';
+    ? null
+    : AppFormatters.distance(event.distanceMeters!);
 
     return Card(
       child: InkWell(
@@ -79,6 +80,11 @@ class MapEventCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
+                    const SizedBox(height: 6),
+                    Text(
+                      'Додано: ${AppFormatters.dateTimeFromIso(event.createdAt)}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,

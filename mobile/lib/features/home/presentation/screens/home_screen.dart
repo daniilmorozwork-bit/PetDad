@@ -16,6 +16,7 @@ import '../../../current_location/data/models/current_location_model.dart';
 import '../../../current_location/presentation/cubit/current_location_cubit.dart';
 import '../../../current_location/presentation/cubit/current_location_state.dart';
 import '../../../settings/presentation/cubit/settings_cubit.dart';
+import '../../../../core/utils/app_formatters.dart';
 
 /// Головний екран застосунку.
 /// Показує компактну карту, швидкі дії та останні активні події.
@@ -298,9 +299,9 @@ Marker _buildCurrentLocationMarker(CurrentLocationModel location) {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Показуються події поруч із вашою позицією: '
-                            '${locationState.location!.latitude.toStringAsFixed(5)}, '
-                            '${locationState.location!.longitude.toStringAsFixed(5)}.',
+                            'Показуються події в радіусі '
+                            '${AppFormatters.distance(settings.defaultSearchRadiusMeters)} '
+                            'від вашої поточної позиції.',
                           ),
                         ),
                       ],

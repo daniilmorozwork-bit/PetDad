@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/models/lost_report_model.dart';
+import '../../../../core/utils/app_formatters.dart';
 
 /// Картка SOS у списку.
 class LostReportCard extends StatelessWidget {
@@ -92,6 +93,11 @@ class LostReportCard extends StatelessWidget {
                       report.description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Зникнення: ${AppFormatters.dateTimeFromIso(report.lastSeenAt)}',
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 8),
                     Chip(

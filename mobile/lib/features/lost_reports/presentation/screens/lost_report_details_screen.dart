@@ -9,6 +9,8 @@ import '../../../sightings/presentation/cubit/sightings_state.dart';
 import '../../../sightings/presentation/widgets/sighting_card.dart';
 import '../cubit/lost_reports_cubit.dart';
 import '../cubit/lost_reports_state.dart';
+import '../../../../core/utils/app_formatters.dart';
+import '../../../../shared/widgets/location_preview_card.dart';
 
 /// Екран деталей SOS.
 class LostReportDetailsScreen extends StatefulWidget {
@@ -138,6 +140,21 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
     }
   }
 
+    String _closeReasonLabel(String? reason) {
+    switch (reason) {
+      case 'pet_found':
+        return 'Тварину знайдено';
+      case 'created_by_mistake':
+        return 'Оголошення створено помилково';
+      case 'duplicate':
+        return 'Дублікат оголошення';
+      case 'other':
+        return 'Інша причина';
+      default:
+        return 'Не вказано';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthCubit>().state;
@@ -244,19 +261,17 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
                         : Colors.green.shade100,
                   ),
                   const SizedBox(height: 16),
-                  _InfoRow(label: 'Опис', value: report.description),
                   _InfoRow(
-                    label: 'Останній раз бачили',
-                    value: report.lastSeenAt,
+                    label: 'Опис',
+                    value: report.description,
                   ),
                   _InfoRow(
-                    label: 'Координати',
-                    value:
-                        '${report.lastSeenLocation.latitude}, ${report.lastSeenLocation.longitude}',
+                    label: 'Зникнення',
+                    value: AppFormatters.dateTimeFromIso(report.lastSeenAt),
                   ),
                   _InfoRow(
                     label: 'Радіус пошуку',
-                    value: '${report.searchRadiusMeters} м',
+                    value: AppFormatters.distance(report.searchRadiusMeters),
                   ),
                   _InfoRow(
                     label: 'Телефон',
@@ -264,19 +279,30 @@ class _LostReportDetailsScreenState extends State<LostReportDetailsScreen> {
                   ),
                   _InfoRow(
                     label: 'Винагорода',
-                    value: report.rewardAmount == null
-                        ? 'Не вказано'
-                        : '${report.rewardAmount}',
+                    value: AppFormatters.amount(report.rewardAmount),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  LocationPreviewCard(
+                    title: 'Місце останнього спостереження',
+                    description: report.lastSeenLocation.address ??
+                        report.lastSeenLocation.city ??
+                        'Місце позначено на карті',
+                    latitude: report.lastSeenLocation.latitude,
+                    longitude: report.lastSeenLocation.longitude,
+                    markerIcon: Icons.campaign,
+                    markerColor: Colors.red,
                   ),
                   if (report.closedAt != null) ...[
                     const Divider(height: 32),
-                    _InfoRow(
+                   _InfoRow(
                       label: 'Закрито',
-                      value: report.closedAt!,
+                      value: AppFormatters.dateTimeFromIso(report.closedAt),
                     ),
                     _InfoRow(
                       label: 'Причина',
-                      value: report.closeReason ?? 'Не вказано',
+                      value: _closeReasonLabel(report.closeReason),
                     ),
                     _InfoRow(
                       label: 'Коментар',

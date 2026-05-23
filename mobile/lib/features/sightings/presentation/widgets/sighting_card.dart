@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/models/sighting_model.dart';
+import '../../../../core/utils/app_formatters.dart';
 
 /// Картка свідчення у списку деталей SOS.
 class SightingCard extends StatelessWidget {
@@ -68,7 +69,7 @@ class SightingCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Координати: ${sighting.location.latitude}, ${sighting.location.longitude}',
+                      'Помічено: ${AppFormatters.dateTimeFromIso(sighting.seenAt)}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 8),

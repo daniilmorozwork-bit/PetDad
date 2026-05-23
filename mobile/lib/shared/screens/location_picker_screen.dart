@@ -99,15 +99,14 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Text(
-                      'Вибране місце',
+                      'Місце позначено на карті',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      '${_selectedPoint.latitude.toStringAsFixed(6)}, '
-                      '${_selectedPoint.longitude.toStringAsFixed(6)}',
+                    const Text(
+                      'Перевірте положення маркера та підтвердьте вибір.',
                     ),
                     const SizedBox(height: 12),
                     FilledButton.icon(
