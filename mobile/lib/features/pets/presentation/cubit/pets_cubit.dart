@@ -91,7 +91,7 @@ class PetsCubit extends Cubit<PetsState> {
     );
 
     try {
-      await _petsRepository.createPet(
+      final createdPet = await _petsRepository.createPet(
         name: name,
         species: species,
         gender: gender,
@@ -110,6 +110,7 @@ class PetsCubit extends Cubit<PetsState> {
         state.copyWith(
           isLoading: false,
           pets: pets,
+          selectedPet: createdPet,
           successMessage: 'Профіль тварини створено',
         ),
       );
